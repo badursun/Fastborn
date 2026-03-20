@@ -75,19 +75,6 @@
             50% { clip-path: inset(0 0 0 0); transform: translateX(0); }
         }
 
-        @keyframes blood-drip {
-            0% { transform: scaleY(0); opacity: 0; }
-            8% { opacity: 0.9; }
-            60% { opacity: 0.8; }
-            100% { transform: scaleY(1); opacity: 0.5; }
-        }
-
-        @keyframes blood-wobble {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-0.5px); }
-            75% { transform: translateX(0.5px); }
-        }
-
         @keyframes horror-flash {
             0%, 100% { opacity: 0; }
             5% { opacity: 0.15; }
@@ -123,85 +110,16 @@
             animation: glitch-shift 0.4s ease-in-out reverse;
         }
 
-        /* Blood drips container */
-        .blood-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 9998;
-            opacity: 0;
-            transition: opacity 1.2s ease-out;
-        }
-
-        .blood-overlay.active {
-            opacity: 1;
-        }
-
-        .blood-drip {
-            position: absolute;
-            top: -2px;
-            transform-origin: top;
-            transform: scaleY(0);
-        }
-
-        /* Main drip body */
-        .blood-drip .drip-body {
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(180deg,
-                #8b0000 0%,
-                var(--red) 15%,
-                #cc0033 40%,
-                rgba(255, 0, 64, 0.6) 70%,
-                rgba(139, 0, 0, 0.3) 100%
-            );
-            border-radius: 1px 1px 40% 40%;
-            position: relative;
-            animation: blood-wobble 2s ease-in-out infinite;
-        }
-
-        /* Pooling drop at bottom */
-        .blood-drip .drip-drop {
-            position: absolute;
-            bottom: -4px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 200%;
-            height: 8px;
-            background: radial-gradient(ellipse, var(--red) 0%, rgba(139, 0, 0, 0.4) 60%, transparent 100%);
-            border-radius: 50%;
-        }
-
-        /* Thin trail smear */
-        .blood-drip .drip-trail {
-            position: absolute;
-            top: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 140%;
-            height: 20%;
-            background: linear-gradient(180deg, #8b0000, transparent);
-            border-radius: 0 0 30% 30%;
-            opacity: 0.4;
-        }
-
-        .blood-overlay.active .blood-drip {
-            animation: blood-drip 2.5s ease-in forwards;
-        }
-
-        /* Screen flash */
+        /* Screen flash — inside hero only */
         .horror-flash {
-            position: fixed;
+            position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
             background: var(--red);
             pointer-events: none;
-            z-index: 9997;
+            z-index: 5;
             opacity: 0;
         }
 
@@ -308,6 +226,7 @@
             align-items: center;
             text-align: center;
             position: relative;
+            overflow: hidden;
         }
 
         .ascii-art {
@@ -1187,14 +1106,11 @@
 </head>
 
 <body>
-<!-- Horror effects overlays -->
-<div class="blood-overlay" id="blood-overlay"></div>
-<div class="horror-flash" id="horror-flash"></div>
-
 <div id="pageable">
 
     <!-- HERO -->
     <section class="hero" data-anchor="home">
+        <div class="horror-flash" id="horror-flash"></div>
         <pre class="ascii-art">
  ███████╗ █████╗ ███████╗████████╗██████╗  ██████╗ ██████╗ ███╗   ██╗
  ██╔════╝██╔══██╗██╔════╝╚══██╔══╝██╔══██╗██╔═══██╗██╔══██╗████╗  ██║
@@ -1589,39 +1505,20 @@
         // Initialize Lucide icons
         lucide.createIcons();
 
-        // === Horror glitch effect on ASCII art ===
+        // === Horror glitch effect — isolated to hero section ===
         (function() {
             const ascii = document.querySelector('.ascii-art');
-            const bloodOverlay = document.getElementById('blood-overlay');
             const horrorFlash = document.getElementById('horror-flash');
             const subtitle = document.querySelector('.hero-subtitle');
 
-            // Generate realistic blood drips
-            function generateDrips() {
-                bloodOverlay.innerHTML = '';
-                const count = 15 + Math.floor(Math.random() * 10);
-                for (let i = 0; i < count; i++) {
-                    const drip = document.createElement('div');
-                    drip.className = 'blood-drip';
-
-                    const width = 2 + Math.random() * 5;
-                    const height = 40 + Math.random() * 200;
-
-                    drip.style.left = (Math.random() * 100) + '%';
-                    drip.style.width = width + 'px';
-                    drip.style.height = height + 'px';
-                    drip.style.animationDelay = (Math.random() * 0.8) + 's';
-                    drip.style.animationDuration = (1.8 + Math.random() * 1.5) + 's';
-
-                    drip.innerHTML = '<div class="drip-trail"></div><div class="drip-body"></div><div class="drip-drop"></div>';
-                    bloodOverlay.appendChild(drip);
-                }
-            }
+            // Expose current section for glitch check
+            window._heroGlitchActive = false;
 
             function triggerHorror() {
-                generateDrips();
+                // Only fire when hero (section 0) is visible
+                if (window._currentSection !== undefined && window._currentSection !== 0) return;
 
-                // Flash
+                // Flash inside hero
                 horrorFlash.classList.add('active');
                 setTimeout(() => horrorFlash.classList.remove('active'), 600);
 
@@ -1634,9 +1531,6 @@
                 subtitle.style.color = 'var(--red)';
                 subtitle.style.letterSpacing = '4px';
 
-                // Blood drips
-                bloodOverlay.classList.add('active');
-
                 // Revert after 4s
                 setTimeout(() => {
                     ascii.classList.remove('horror');
@@ -1644,11 +1538,6 @@
                     subtitle.style.color = '';
                     subtitle.style.letterSpacing = '';
                 }, 4000);
-
-                // Blood fades slower
-                setTimeout(() => {
-                    bloodOverlay.classList.remove('active');
-                }, 5000);
             }
 
             // Trigger randomly between 8-15 seconds, recurring
@@ -1673,6 +1562,7 @@
             const sections = wrapper.querySelectorAll('section');
             const total = sections.length;
             let current = 0;
+            window._currentSection = 0;
             let isAnimating = false;
             const COOLDOWN = 700; // ms between transitions
 
@@ -1680,12 +1570,15 @@
                 if (index < 0 || index >= total || isAnimating) return;
                 isAnimating = true;
                 current = index;
+                window._currentSection = current;
                 wrapper.style.transform = 'translateY(-' + (current * 100) + 'vh)';
-                // Clear horror effects on section change
-                var bo = document.getElementById('blood-overlay');
-                var hf = document.getElementById('horror-flash');
-                if (bo) bo.classList.remove('active');
-                if (hf) hf.classList.remove('active');
+                // Clear horror effects when leaving hero
+                if (current !== 0) {
+                    var hf = document.getElementById('horror-flash');
+                    if (hf) hf.classList.remove('active');
+                    var art = document.querySelector('.ascii-art');
+                    if (art) art.classList.remove('horror');
+                }
                 setTimeout(() => { isAnimating = false; }, COOLDOWN);
             }
 
