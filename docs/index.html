@@ -12,6 +12,7 @@
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://badursun.github.io/Fastborn/">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script src="https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
 
@@ -56,7 +57,205 @@
             will-change: transform;
         }
 
-        /* Scanline + CRT flicker removed — GPU performance killer */
+        /* === GLITCH HORROR EFFECT === */
+        @keyframes glitch-skew {
+            0%, 100% { transform: skew(0deg); }
+            20% { transform: skew(-2deg); }
+            40% { transform: skew(3deg); }
+            60% { transform: skew(-1deg); }
+            80% { transform: skew(2deg); }
+        }
+
+        @keyframes glitch-shift {
+            0%, 100% { clip-path: inset(0 0 0 0); transform: translateX(0); }
+            10% { clip-path: inset(20% 0 60% 0); transform: translateX(-4px); }
+            20% { clip-path: inset(50% 0 20% 0); transform: translateX(3px); }
+            30% { clip-path: inset(10% 0 70% 0); transform: translateX(-2px); }
+            40% { clip-path: inset(60% 0 10% 0); transform: translateX(5px); }
+            50% { clip-path: inset(0 0 0 0); transform: translateX(0); }
+        }
+
+        @keyframes blood-drip {
+            0% { transform: scaleY(0); opacity: 0; }
+            8% { opacity: 0.9; }
+            60% { opacity: 0.8; }
+            100% { transform: scaleY(1); opacity: 0.5; }
+        }
+
+        @keyframes blood-wobble {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-0.5px); }
+            75% { transform: translateX(0.5px); }
+        }
+
+        @keyframes horror-flash {
+            0%, 100% { opacity: 0; }
+            5% { opacity: 0.15; }
+            10% { opacity: 0; }
+            12% { opacity: 0.1; }
+            14% { opacity: 0; }
+        }
+
+        .ascii-art.horror {
+            color: var(--red) !important;
+            text-shadow: 0 0 10px var(--red), 0 0 40px rgba(255, 0, 64, 0.5), 0 0 80px rgba(255, 0, 64, 0.2) !important;
+            animation: glitch-skew 0.3s ease-in-out;
+        }
+
+        .ascii-art.horror::before,
+        .ascii-art.horror::after {
+            content: attr(data-text);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            color: var(--red);
+        }
+
+        .ascii-art.horror::before {
+            text-shadow: 2px 0 cyan;
+            animation: glitch-shift 0.4s ease-in-out;
+        }
+
+        .ascii-art.horror::after {
+            text-shadow: -2px 0 yellow;
+            animation: glitch-shift 0.4s ease-in-out reverse;
+        }
+
+        /* Blood drips container */
+        .blood-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 9998;
+            opacity: 0;
+            transition: opacity 1.2s ease-out;
+        }
+
+        .blood-overlay.active {
+            opacity: 1;
+        }
+
+        .blood-drip {
+            position: absolute;
+            top: -2px;
+            transform-origin: top;
+            transform: scaleY(0);
+        }
+
+        /* Main drip body */
+        .blood-drip .drip-body {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(180deg,
+                #8b0000 0%,
+                var(--red) 15%,
+                #cc0033 40%,
+                rgba(255, 0, 64, 0.6) 70%,
+                rgba(139, 0, 0, 0.3) 100%
+            );
+            border-radius: 1px 1px 40% 40%;
+            position: relative;
+            animation: blood-wobble 2s ease-in-out infinite;
+        }
+
+        /* Pooling drop at bottom */
+        .blood-drip .drip-drop {
+            position: absolute;
+            bottom: -4px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200%;
+            height: 8px;
+            background: radial-gradient(ellipse, var(--red) 0%, rgba(139, 0, 0, 0.4) 60%, transparent 100%);
+            border-radius: 50%;
+        }
+
+        /* Thin trail smear */
+        .blood-drip .drip-trail {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 140%;
+            height: 20%;
+            background: linear-gradient(180deg, #8b0000, transparent);
+            border-radius: 0 0 30% 30%;
+            opacity: 0.4;
+        }
+
+        .blood-overlay.active .blood-drip {
+            animation: blood-drip 2.5s ease-in forwards;
+        }
+
+        /* Screen flash */
+        .horror-flash {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--red);
+            pointer-events: none;
+            z-index: 9997;
+            opacity: 0;
+        }
+
+        .horror-flash.active {
+            animation: horror-flash 0.6s ease-in-out;
+        }
+
+        /* === DISINTEGRATION EFFECT === */
+        .disintegrate-canvas-wrap {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .disintegrate-particle {
+            position: absolute;
+            background-size: cover;
+            will-change: transform, opacity;
+        }
+
+        @keyframes particle-fly {
+            0% {
+                transform: translate(0, 0) rotate(0deg) scale(1);
+                opacity: 1;
+            }
+            20% {
+                opacity: 0.9;
+                transform: translate(calc(var(--tx) * 0.1), calc(var(--ty) * 0.05)) rotate(calc(var(--rot) * 0.1)) scale(0.95);
+            }
+            60% {
+                opacity: 0.5;
+            }
+            100% {
+                transform: translate(var(--tx), var(--ty)) rotate(var(--rot)) scale(0);
+                opacity: 0;
+            }
+        }
+
+        #section-workflow {
+            position: relative;
+        }
+
+        #section-workflow > .container {
+            transition: opacity 1.5s ease-in, filter 1.5s ease-in;
+        }
+
+        #section-workflow.disintegrating > .container {
+            opacity: 0;
+            filter: brightness(2) contrast(0);
+        }
 
         @keyframes blink {
 
@@ -119,6 +318,8 @@
             line-height: 1.2;
             text-shadow: 0 0 10px var(--green), 0 0 30px var(--green-dark);
             margin-bottom: 24px;
+            position: relative;
+            transition: color 0.15s, text-shadow 0.15s;
         }
 
         .hero-subtitle {
@@ -986,6 +1187,10 @@
 </head>
 
 <body>
+<!-- Horror effects overlays -->
+<div class="blood-overlay" id="blood-overlay"></div>
+<div class="horror-flash" id="horror-flash"></div>
+
 <div id="pageable">
 
     <!-- HERO -->
@@ -1032,7 +1237,7 @@
     </section>
 
     <!-- HOW IT WORKS -->
-    <section>
+    <section id="section-workflow">
         <div class="container">
             <div class="section-header">// WORKFLOW</div>
             <div class="section-title">How It <span class="highlight">Works</span></div>
@@ -1384,6 +1589,84 @@
         // Initialize Lucide icons
         lucide.createIcons();
 
+        // === Horror glitch effect on ASCII art ===
+        (function() {
+            const ascii = document.querySelector('.ascii-art');
+            const bloodOverlay = document.getElementById('blood-overlay');
+            const horrorFlash = document.getElementById('horror-flash');
+            const subtitle = document.querySelector('.hero-subtitle');
+
+            // Generate realistic blood drips
+            function generateDrips() {
+                bloodOverlay.innerHTML = '';
+                const count = 15 + Math.floor(Math.random() * 10);
+                for (let i = 0; i < count; i++) {
+                    const drip = document.createElement('div');
+                    drip.className = 'blood-drip';
+
+                    const width = 2 + Math.random() * 5;
+                    const height = 40 + Math.random() * 200;
+
+                    drip.style.left = (Math.random() * 100) + '%';
+                    drip.style.width = width + 'px';
+                    drip.style.height = height + 'px';
+                    drip.style.animationDelay = (Math.random() * 0.8) + 's';
+                    drip.style.animationDuration = (1.8 + Math.random() * 1.5) + 's';
+
+                    drip.innerHTML = '<div class="drip-trail"></div><div class="drip-body"></div><div class="drip-drop"></div>';
+                    bloodOverlay.appendChild(drip);
+                }
+            }
+
+            function triggerHorror() {
+                generateDrips();
+
+                // Flash
+                horrorFlash.classList.add('active');
+                setTimeout(() => horrorFlash.classList.remove('active'), 600);
+
+                // ASCII goes red + glitch
+                ascii.classList.add('horror');
+
+                // Subtitle change
+                const origText = subtitle.textContent;
+                subtitle.textContent = 'DATA DESTRUCTION TOOL';
+                subtitle.style.color = 'var(--red)';
+                subtitle.style.letterSpacing = '4px';
+
+                // Blood drips
+                bloodOverlay.classList.add('active');
+
+                // Revert after 4s
+                setTimeout(() => {
+                    ascii.classList.remove('horror');
+                    subtitle.textContent = origText;
+                    subtitle.style.color = '';
+                    subtitle.style.letterSpacing = '';
+                }, 4000);
+
+                // Blood fades slower
+                setTimeout(() => {
+                    bloodOverlay.classList.remove('active');
+                }, 5000);
+            }
+
+            // Trigger randomly between 8-15 seconds, recurring
+            function scheduleHorror() {
+                const delay = 8000 + Math.random() * 7000;
+                setTimeout(() => {
+                    triggerHorror();
+                    scheduleHorror();
+                }, delay);
+            }
+
+            // First trigger after 5s
+            setTimeout(() => {
+                triggerHorror();
+                scheduleHorror();
+            }, 5000);
+        })();
+
         // === Minimal fullpage scroll engine ===
         (function() {
             const wrapper = document.getElementById('pageable');
@@ -1398,6 +1681,11 @@
                 isAnimating = true;
                 current = index;
                 wrapper.style.transform = 'translateY(-' + (current * 100) + 'vh)';
+                // Clear horror effects on section change
+                var bo = document.getElementById('blood-overlay');
+                var hf = document.getElementById('horror-flash');
+                if (bo) bo.classList.remove('active');
+                if (hf) hf.classList.remove('active');
                 setTimeout(() => { isAnimating = false; }, COOLDOWN);
             }
 
@@ -1627,12 +1915,116 @@
                     timeouts.push(tid);
                 });
 
-                // After sequence ends: wait 4s then reset and replay
+                // After sequence ends: trigger disintegration, then reset and replay
+                const disintegrateTid = setTimeout(() => {
+                    disintegrateSection();
+                }, totalDelay + 1500);
+                timeouts.push(disintegrateTid);
+
                 const restartTid = setTimeout(() => {
                     resetSequence();
+                    restoreSection();
                     runSequence();
-                }, totalDelay + 4000);
+                }, totalDelay + 10000);
                 timeouts.push(restartTid);
+            }
+
+            // === Disintegration engine ===
+            function disintegrateSection() {
+                const section = document.getElementById('section-workflow');
+                if (!section || section.classList.contains('disintegrating')) return;
+
+                // Capture FIRST, then start hiding content
+                html2canvas(section, {
+                    backgroundColor: '#0a0a0a',
+                    scale: 0.5,
+                }).then(function(canvas) {
+                    // Now that we have the snapshot, hide original content
+                    section.classList.add('disintegrating');
+                    const ctx = canvas.getContext('2d');
+                    const w = canvas.width;
+                    const h = canvas.height;
+                    const particleSize = 8; // px per particle chunk
+                    const cols = Math.ceil(w / particleSize);
+                    const rows = Math.ceil(h / particleSize);
+
+                    const wrap = document.createElement('div');
+                    wrap.className = 'disintegrate-canvas-wrap';
+                    wrap.id = 'disintegrate-wrap';
+                    section.appendChild(wrap);
+
+                    // Section dimensions for positioning
+                    const rect = section.getBoundingClientRect();
+                    const scaleX = rect.width / w;
+                    const scaleY = rect.height / h;
+
+                    // Create particles in random order for organic feel
+                    const cells = [];
+                    for (let row = 0; row < rows; row++) {
+                        for (let col = 0; col < cols; col++) {
+                            cells.push({ row, col });
+                        }
+                    }
+                    // Shuffle — right side disintegrates first (like Thanos snap)
+                    cells.sort(function(a, b) {
+                        return (b.col + Math.random() * cols * 0.5) - (a.col + Math.random() * cols * 0.5);
+                    });
+
+                    cells.forEach(function(cell, i) {
+                        const sx = cell.col * particleSize;
+                        const sy = cell.row * particleSize;
+                        const sw = Math.min(particleSize, w - sx);
+                        const sh = Math.min(particleSize, h - sy);
+
+                        if (sw <= 0 || sh <= 0) return;
+
+                        // Extract pixel data to check if this chunk is empty
+                        const imgData = ctx.getImageData(sx, sy, sw, sh);
+                        let hasContent = false;
+                        for (let p = 3; p < imgData.data.length; p += 16) {
+                            if (imgData.data[p] > 20) { hasContent = true; break; }
+                        }
+                        if (!hasContent) return;
+
+                        // Create mini canvas for this particle
+                        const pCanvas = document.createElement('canvas');
+                        pCanvas.width = sw;
+                        pCanvas.height = sh;
+                        pCanvas.getContext('2d').putImageData(imgData, 0, 0);
+
+                        const particle = document.createElement('div');
+                        particle.className = 'disintegrate-particle';
+                        particle.style.left = (sx * scaleX) + 'px';
+                        particle.style.top = (sy * scaleY) + 'px';
+                        particle.style.width = (sw * scaleX) + 'px';
+                        particle.style.height = (sh * scaleY) + 'px';
+                        particle.style.backgroundImage = 'url(' + pCanvas.toDataURL() + ')';
+
+                        // Random fly direction — mostly up-right
+                        const tx = (50 + Math.random() * 200) * (Math.random() > 0.3 ? 1 : -1);
+                        const ty = -(30 + Math.random() * 250);
+                        const rot = (-180 + Math.random() * 360) + 'deg';
+
+                        particle.style.setProperty('--tx', tx + 'px');
+                        particle.style.setProperty('--ty', ty + 'px');
+                        particle.style.setProperty('--rot', rot);
+
+                        // Staggered delay — right side first, longer duration
+                        const delay = (i / cells.length) * 3.5;
+                        const duration = 1.5 + Math.random() * 1;
+                        particle.style.animation = 'particle-fly ' + duration + 's ease-in ' + delay + 's forwards';
+
+                        wrap.appendChild(particle);
+                    });
+                });
+            }
+
+            function restoreSection() {
+                const section = document.getElementById('section-workflow');
+                if (!section) return;
+                section.classList.remove('disintegrating');
+                const wrap = document.getElementById('disintegrate-wrap');
+                if (wrap) wrap.remove();
             }
 
             // Intersection Observer — start when visible, pause when not
@@ -1643,6 +2035,7 @@
                         runSequence();
                     } else {
                         resetSequence();
+                        restoreSection();
                         terminal.innerHTML = '<div style="color:#333;font-size:0.75rem">Scroll here to watch boot sequence...</div>';
                     }
                 });
