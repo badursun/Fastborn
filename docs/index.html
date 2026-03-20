@@ -1,0 +1,1657 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FastBorn — Secure Disk Erasure Tool</title>
+    <meta name="description"
+        content="Zero-touch bootable USB disk erasure tool. Open-source DBAN alternative with Quick & Full wipe modes, verification, JSON logging.">
+    <meta property="og:title" content="FastBorn — Secure Disk Erasure Tool">
+    <meta property="og:description" content="Plug USB. Boot. Wait. Done. Open-source DBAN alternative.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://badursun.github.io/Fastborn/">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --green: #00ff41;
+            --green-dim: #00cc33;
+            --green-dark: #00661a;
+            --red: #ff0040;
+            --cyan: #00e5ff;
+            --yellow: #ffdd00;
+            --bg: #0a0a0a;
+            --bg-light: #111111;
+            --bg-card: #0d1117;
+            --border: #1a3a1a;
+            --text: #b0b0b0;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            height: 100%;
+        }
+
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+        }
+
+        /* fullpage wrapper */
+        #pageable {
+            height: 100vh;
+            transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+            will-change: transform;
+        }
+
+        /* Scanline + CRT flicker removed — GPU performance killer */
+
+        @keyframes blink {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0;
+            }
+        }
+
+        @keyframes typewriter {
+            from {
+                width: 0;
+            }
+
+            to {
+                width: 100%;
+            }
+        }
+
+        /* Static glow — no animation, no GPU drain */
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* HERO */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            position: relative;
+        }
+
+        .ascii-art {
+            color: var(--green);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: clamp(0.35rem, 1.5vw, 0.85rem);
+            white-space: pre;
+            line-height: 1.2;
+            text-shadow: 0 0 10px var(--green), 0 0 30px var(--green-dark);
+            margin-bottom: 24px;
+        }
+
+        .hero-subtitle {
+            color: var(--cyan);
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+            letter-spacing: 2px;
+        }
+
+        .hero-tagline {
+            color: var(--text);
+            font-size: 0.8rem;
+            margin-bottom: 40px;
+        }
+
+        .hero-tagline .cursor {
+            animation: blink 1s step-end infinite;
+            color: var(--green);
+        }
+
+        .cta-group {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 14px 28px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-decoration: none;
+            border: 2px solid;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            color: var(--bg);
+            background: var(--green);
+            border-color: var(--green);
+        }
+
+        .btn-primary:hover {
+            background: transparent;
+            color: var(--green);
+            box-shadow: 0 0 20px var(--green-dark), inset 0 0 20px rgba(0, 255, 65, 0.1);
+        }
+
+        .btn-secondary {
+            color: var(--green);
+            background: transparent;
+            border-color: var(--green-dark);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--green);
+            box-shadow: 0 0 20px var(--green-dark);
+        }
+
+        .scroll-indicator {
+            position: absolute;
+            bottom: 40px;
+            color: var(--green-dark);
+            font-size: 0.7rem;
+            letter-spacing: 3px;
+            animation: blink 2s ease-in-out infinite;
+        }
+
+        /* SECTIONS — each is exactly 100vh */
+        section {
+            height: 100vh;
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 40px 0;
+            box-sizing: border-box;
+        }
+
+        section > .container {
+            width: 100%;
+        }
+
+        .hero {
+            padding: 0;
+            border-top: none;
+        }
+
+        .section-header {
+            color: var(--green);
+            font-size: 0.75rem;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .section-title {
+            color: #e0e0e0;
+            font-size: 1.5rem;
+            margin-bottom: 40px;
+        }
+
+        .section-title .highlight {
+            color: var(--green);
+        }
+
+        /* TERMINAL BLOCK */
+        .terminal {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 24px 0;
+        }
+
+        .terminal-bar {
+            background: #161b22;
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .terminal-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .terminal-dot.red {
+            background: #ff5f57;
+        }
+
+        .terminal-dot.yellow {
+            background: #febc2e;
+        }
+
+        .terminal-dot.green {
+            background: #28c840;
+        }
+
+        .terminal-title {
+            color: #666;
+            font-size: 0.7rem;
+            margin-left: 8px;
+        }
+
+        .terminal-body {
+            padding: 20px;
+            font-size: 0.8rem;
+            line-height: 1.8;
+            overflow-x: auto;
+            height: 400px;
+            overflow-y: auto;
+        }
+
+        .terminal-body .prompt {
+            color: var(--green);
+        }
+
+        .terminal-body .command {
+            color: #e0e0e0;
+        }
+
+        .terminal-body .output {
+            color: #666;
+        }
+
+        .terminal-body .success {
+            color: var(--green);
+        }
+
+        .terminal-body .warning {
+            color: var(--yellow);
+        }
+
+        .terminal-body .error {
+            color: var(--red);
+        }
+
+        /* FLOW */
+        .flow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 0;
+            margin: 40px 0;
+        }
+
+        .flow-step {
+            text-align: center;
+            padding: 16px 20px;
+        }
+
+        .flow-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 56px;
+            height: 56px;
+            margin: 0 auto 12px;
+            border: 1px solid var(--green-dark);
+            border-radius: 12px;
+            background: var(--bg-card);
+            color: var(--green);
+            transition: all 0.3s ease;
+        }
+
+        .flow-step:hover .flow-icon {
+            border-color: var(--green);
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.15);
+        }
+
+        .flow-icon svg {
+            width: 24px;
+            height: 24px;
+            stroke: var(--green);
+            stroke-width: 1.5;
+        }
+
+        .flow-label {
+            color: var(--green);
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .flow-arrow {
+            color: var(--green-dark);
+            display: flex;
+            align-items: center;
+            font-size: 1.5rem;
+            padding: 0 4px;
+        }
+
+        /* FEATURES GRID — horizontal cards */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+
+        .feature-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 18px 20px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+        }
+
+        .feature-card:hover {
+            border-color: var(--green-dark);
+            box-shadow: 0 0 30px rgba(0, 255, 65, 0.05);
+        }
+
+        .feature-card .icon {
+            color: var(--green);
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .feature-card .icon svg {
+            width: 24px;
+            height: 24px;
+            stroke: var(--green);
+            stroke-width: 1.5;
+        }
+
+        .feature-card .feature-text h3 {
+            color: #e0e0e0;
+            font-size: 0.8rem;
+            margin-bottom: 4px;
+        }
+
+        .feature-card .feature-text p {
+            font-size: 0.7rem;
+            color: #888;
+            line-height: 1.4;
+        }
+
+        /* MODES */
+        .modes {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        /* modes responsive handled in main responsive block below */
+
+        .mode-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 32px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .mode-card.default::before {
+            content: 'DEFAULT';
+            position: absolute;
+            top: 12px;
+            right: -28px;
+            background: var(--green);
+            color: var(--bg);
+            font-size: 0.6rem;
+            font-weight: 700;
+            padding: 4px 32px;
+            transform: rotate(45deg);
+        }
+
+        .mode-card h3 {
+            font-size: 1.1rem;
+            margin-bottom: 4px;
+        }
+
+        .mode-card.default h3 {
+            color: var(--green);
+        }
+
+        .mode-card.full h3 {
+            color: var(--red);
+        }
+
+        .mode-card .speed {
+            color: var(--cyan);
+            font-size: 0.75rem;
+            margin-bottom: 16px;
+        }
+
+        .mode-card ul {
+            list-style: none;
+            font-size: 0.75rem;
+        }
+
+        .mode-card ul li {
+            padding: 4px 0;
+            color: #888;
+        }
+
+        .mode-card ul li::before {
+            content: '>';
+            color: var(--green-dark);
+            margin-right: 8px;
+        }
+
+        /* COMPARISON TABLE */
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.75rem;
+            margin: 24px 0;
+        }
+
+        .comparison-table th {
+            color: var(--green);
+            text-align: left;
+            padding: 12px;
+            border-bottom: 2px solid var(--green-dark);
+            font-weight: 700;
+        }
+
+        .comparison-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #1a1a1a;
+        }
+
+        .comparison-table tr:hover td {
+            background: rgba(0, 255, 65, 0.02);
+        }
+
+        .check {
+            color: var(--green);
+        }
+
+        .cross {
+            color: #444;
+        }
+
+        /* JSON BLOCK */
+        .json-block {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 24px;
+            font-size: 0.75rem;
+            overflow-x: auto;
+        }
+
+        .json-key {
+            color: var(--cyan);
+        }
+
+        .json-string {
+            color: var(--green);
+        }
+
+        .json-number {
+            color: var(--yellow);
+        }
+
+        /* INSTALL TABS */
+        .install-tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 0;
+        }
+
+        .install-tab {
+            padding: 10px 20px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            background: transparent;
+            color: #666;
+            border: 1px solid var(--border);
+            border-bottom: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .install-tab:first-child {
+            border-radius: 8px 0 0 0;
+        }
+
+        .install-tab:last-child {
+            border-radius: 0 8px 0 0;
+        }
+
+        .install-tab.active {
+            color: var(--green);
+            background: var(--bg-card);
+            border-color: var(--green-dark);
+        }
+
+        .install-content {
+            display: none;
+        }
+
+        .install-content.active {
+            display: block;
+        }
+
+        .install-panel {
+            border: 1px solid var(--border);
+            border-top: 1px solid var(--green-dark);
+            border-radius: 0 0 8px 8px;
+            background: var(--bg-card);
+            padding: 24px;
+            font-size: 0.8rem;
+        }
+
+        .install-panel code {
+            color: var(--green);
+        }
+
+        .install-panel .step {
+            margin-bottom: 12px;
+        }
+
+        .install-panel .step-num {
+            color: var(--green-dark);
+            margin-right: 4px;
+        }
+
+        /* HASH */
+        .hash-block {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 24px 0;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .hash-label {
+            color: var(--green-dark);
+            font-size: 0.7rem;
+            letter-spacing: 2px;
+        }
+
+        .hash-value {
+            color: var(--cyan);
+            font-size: 0.8rem;
+            word-break: break-all;
+        }
+
+        /* HERO BADGES */
+        .hero-badges {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 28px;
+        }
+
+        .badge {
+            font-size: 0.6rem;
+            color: var(--green);
+            border: 1px solid var(--green-dark);
+            padding: 4px 12px;
+            border-radius: 20px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        /* HERO LINKS (replaces footer) */
+        .hero-links {
+            margin-top: 28px;
+            font-size: 0.65rem;
+            color: #444;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .hero-links a {
+            color: var(--green-dark);
+            text-decoration: none;
+        }
+
+        .hero-links a:hover {
+            color: var(--green);
+        }
+
+        .hero-links span {
+            color: #333;
+        }
+
+        /* WARNING — military style */
+        .warning-section {
+            background: repeating-linear-gradient(
+                -45deg,
+                transparent,
+                transparent 18px,
+                rgba(255, 0, 64, 0.03) 18px,
+                rgba(255, 0, 64, 0.03) 36px
+            );
+        }
+
+        .warning-banner {
+            border: 2px solid var(--red);
+            border-radius: 0;
+            padding: 0;
+            max-width: 700px;
+            margin: 0 auto;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .warning-header {
+            background: var(--red);
+            color: var(--bg);
+            padding: 10px 20px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .warning-header svg {
+            width: 18px;
+            height: 18px;
+            stroke: var(--bg);
+            stroke-width: 2;
+        }
+
+        .warning-body {
+            padding: 28px 24px;
+            background: rgba(255, 0, 64, 0.03);
+        }
+
+        .warning-body .warn-headline {
+            color: var(--red);
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            line-height: 1.3;
+        }
+
+        .warning-items {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .warning-items li {
+            font-size: 0.72rem;
+            color: #999;
+            padding: 6px 0;
+            padding-left: 20px;
+            position: relative;
+            line-height: 1.4;
+        }
+
+        .warning-items li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 11px;
+            width: 8px;
+            height: 8px;
+            background: var(--red);
+            clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+        }
+
+        .warning-items li strong {
+            color: var(--red);
+        }
+
+        .warning-footer {
+            border-top: 1px solid rgba(255, 0, 64, 0.15);
+            padding: 12px 24px;
+            font-size: 0.6rem;
+            color: #555;
+            letter-spacing: 1px;
+            text-align: center;
+            text-transform: uppercase;
+        }
+
+        /* ===== RESPONSIVE ===== */
+
+        @media (max-width: 768px) {
+            section {
+                padding: 24px 0;
+            }
+
+            .ascii-art {
+                font-size: clamp(0.22rem, 3.5vw, 0.55rem);
+            }
+
+            .hero-subtitle {
+                font-size: 0.7rem;
+            }
+
+            .cta-group {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .btn {
+                width: 100%;
+                max-width: 280px;
+                justify-content: center;
+            }
+
+            .scroll-indicator {
+                bottom: 12px;
+            }
+
+            .hero-badges {
+                gap: 6px;
+                margin-bottom: 20px;
+            }
+
+            .badge {
+                font-size: 0.5rem;
+                padding: 3px 8px;
+            }
+
+            .hero-links {
+                margin-top: 20px;
+                font-size: 0.55rem;
+            }
+
+            .section-title {
+                font-size: 1.2rem;
+                margin-bottom: 24px;
+            }
+
+            .section-header {
+                margin-bottom: 4px;
+            }
+
+            /* Flow — compact 3x2 grid, no arrows on mobile */
+            .flow {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 12px;
+            }
+
+            .flow-arrow {
+                display: none;
+            }
+
+            .flow-step {
+                padding: 8px 4px;
+            }
+
+            .flow-icon {
+                width: 40px;
+                height: 40px;
+                border-radius: 8px;
+            }
+
+            .flow-icon svg {
+                width: 18px;
+                height: 18px;
+            }
+
+            .flow-label {
+                font-size: 0.6rem;
+            }
+
+            /* Terminal */
+            .terminal-body {
+                font-size: 0.55rem;
+                height: 280px;
+                padding: 12px;
+                line-height: 1.5;
+            }
+
+            /* Features — single col, compact horizontal */
+            .features-grid {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+
+            .feature-card {
+                padding: 12px 14px;
+                gap: 10px;
+            }
+
+            .feature-card .feature-text h3 {
+                font-size: 0.7rem;
+            }
+
+            .feature-card .feature-text p {
+                font-size: 0.6rem;
+            }
+
+            .feature-card .icon svg {
+                width: 20px;
+                height: 20px;
+            }
+
+            /* Modes */
+            .modes {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+
+            .mode-card {
+                padding: 20px;
+            }
+
+            .mode-card .speed {
+                font-size: 0.65rem;
+            }
+
+            .mode-card ul {
+                font-size: 0.65rem;
+            }
+
+            /* Comparison table scroll */
+            .comparison-table {
+                display: block;
+                overflow-x: auto;
+                white-space: nowrap;
+                font-size: 0.65rem;
+            }
+
+            /* Install tabs */
+            .install-tabs {
+                overflow-x: auto;
+            }
+
+            .install-tab {
+                font-size: 0.65rem;
+                padding: 8px 14px;
+            }
+
+            .install-panel {
+                font-size: 0.7rem;
+                padding: 16px;
+            }
+
+            /* JSON block */
+            .json-block {
+                font-size: 0.55rem;
+                padding: 14px;
+            }
+
+            .json-block pre {
+                font-size: 0.55rem;
+            }
+
+            /* Hash */
+            .hash-block {
+                padding: 14px;
+            }
+
+            .hash-value {
+                font-size: 0.6rem;
+            }
+
+            /* Warning */
+            .warning-body {
+                padding: 20px 16px;
+            }
+
+            .warn-headline {
+                font-size: 0.8rem !important;
+            }
+
+            .warning-items li {
+                font-size: 0.62rem;
+                padding: 4px 0 4px 16px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 0 12px;
+            }
+
+            .ascii-art {
+                font-size: clamp(0.18rem, 3vw, 0.4rem);
+                margin-bottom: 12px;
+            }
+
+            .hero-tagline {
+                font-size: 0.65rem;
+            }
+
+            .section-title {
+                font-size: 1rem;
+            }
+
+            .features-grid {
+                gap: 6px;
+            }
+
+            .feature-card {
+                padding: 10px 12px;
+            }
+
+            .terminal-body {
+                font-size: 0.5rem;
+                height: 250px;
+            }
+
+            .section-title {
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+<div id="pageable">
+
+    <!-- HERO -->
+    <section class="hero" data-anchor="home">
+        <pre class="ascii-art">
+ ███████╗ █████╗ ███████╗████████╗██████╗  ██████╗ ██████╗ ███╗   ██╗
+ ██╔════╝██╔══██╗██╔════╝╚══██╔══╝██╔══██╗██╔═══██╗██╔══██╗████╗  ██║
+ █████╗  ███████║███████╗   ██║   ██████╔╝██║   ██║██████╔╝██╔██╗ ██║
+ ██╔══╝  ██╔══██║╚════██║   ██║   ██╔══██╗██║   ██║██╔══██╗██║╚██╗██║
+ ██║     ██║  ██║███████║   ██║   ██████╔╝╚██████╔╝██║  ██║██║ ╚████║
+ ╚═╝     ╚═╝  ╚═╝╚══════╝   ╚═╝   ╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═══╝
+    </pre>
+        <div class="hero-subtitle">SECURE DISK ERASURE TOOL</div>
+        <div class="hero-tagline">$ Plug USB. Boot. Wait. Done.<span class="cursor">_</span></div>
+
+        <div class="hero-badges">
+            <span class="badge">Open Source</span>
+            <span class="badge">MIT License</span>
+            <span class="badge">BIOS + UEFI</span>
+            <span class="badge">NVMe Ready</span>
+        </div>
+
+        <div class="cta-group">
+            <a href="https://github.com/badursun/Fastborn/releases/latest/download/fastborn.iso"
+                class="btn btn-primary">
+                &darr; DOWNLOAD ISO (~20MB)
+            </a>
+            <a href="https://github.com/badursun/Fastborn" class="btn btn-secondary" target="_blank" rel="noopener">
+                &lt;/&gt; GITHUB
+            </a>
+        </div>
+
+        <div class="hero-links">
+            <a href="https://github.com/badursun/Fastborn" target="_blank" rel="noopener">GitHub</a>
+            <span>&middot;</span>
+            <a href="https://github.com/badursun/Fastborn/releases" target="_blank" rel="noopener">Releases</a>
+            <span>&middot;</span>
+            <a href="https://github.com/badursun/Fastborn/issues" target="_blank" rel="noopener">Issues</a>
+            <span>&middot;</span>
+            <span>Built by <a href="https://github.com/badursun" target="_blank" rel="noopener">@badursun</a></span>
+        </div>
+
+        <div class="scroll-indicator">&darr; SCROLL &darr;</div>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section>
+        <div class="container">
+            <div class="section-header">// WORKFLOW</div>
+            <div class="section-title">How It <span class="highlight">Works</span></div>
+
+            <div class="flow">
+                <div class="flow-step">
+                    <div class="flow-icon"><i data-lucide="usb"></i></div>
+                    <div class="flow-label">Flash USB</div>
+                </div>
+                <div class="flow-arrow"><i data-lucide="chevron-right"></i></div>
+                <div class="flow-step">
+                    <div class="flow-icon"><i data-lucide="plug"></i></div>
+                    <div class="flow-label">Plug In</div>
+                </div>
+                <div class="flow-arrow"><i data-lucide="chevron-right"></i></div>
+                <div class="flow-step">
+                    <div class="flow-icon"><i data-lucide="power"></i></div>
+                    <div class="flow-label">Boot & Wait</div>
+                </div>
+                <div class="flow-arrow"><i data-lucide="chevron-right"></i></div>
+                <div class="flow-step">
+                    <div class="flow-icon"><i data-lucide="hard-drive"></i></div>
+                    <div class="flow-label">Disks Wiped</div>
+                </div>
+                <div class="flow-arrow"><i data-lucide="chevron-right"></i></div>
+                <div class="flow-step">
+                    <div class="flow-icon"><i data-lucide="shield-check"></i></div>
+                    <div class="flow-label">Verified</div>
+                </div>
+                <div class="flow-arrow"><i data-lucide="chevron-right"></i></div>
+                <div class="flow-step">
+                    <div class="flow-icon"><i data-lucide="rotate-ccw"></i></div>
+                    <div class="flow-label">Auto Reboot</div>
+                </div>
+            </div>
+
+            <div class="terminal">
+                <div class="terminal-bar">
+                    <div class="terminal-dot red"></div>
+                    <div class="terminal-dot yellow"></div>
+                    <div class="terminal-dot green"></div>
+                    <div class="terminal-title">fastborn.sh — live boot simulation</div>
+                </div>
+                <div class="terminal-body" id="boot-terminal">
+                    <div id="boot-placeholder" style="color:#333;font-size:0.75rem">Scroll down to start boot sequence...</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- MODES -->
+    <section>
+        <div class="container">
+            <div class="section-header">// ERASE MODES</div>
+            <div class="section-title">Two <span class="highlight">Modes</span>, One Choice</div>
+
+            <div class="modes">
+                <div class="mode-card default">
+                    <h3>&gt; Quick Mode</h3>
+                    <div class="speed">~15-20 min / 80GB</div>
+                    <ul>
+                        <li>1-pass zero fill (0x00)</li>
+                        <li>All sectors including MBR</li>
+                        <li>Auto-starts after 3s GRUB timeout</li>
+                        <li>Ideal for internet cafes &amp; labs</li>
+                        <li>Sufficient for MBR malware removal</li>
+                    </ul>
+                </div>
+                <div class="mode-card full">
+                    <h3>&gt; Full Mode</h3>
+                    <div class="speed">~2+ hours / 80GB</div>
+                    <ul>
+                        <li>DoD 5220.22-M (7-pass)</li>
+                        <li>0x00 &rarr; 0xFF &rarr; Random &rarr; repeat</li>
+                        <li>Military-grade data destruction</li>
+                        <li>For sensitive data</li>
+                        <li>Manual selection in GRUB menu</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FEATURES -->
+    <section>
+        <div class="container">
+            <div class="section-header">// FEATURES</div>
+            <div class="section-title">Why <span class="highlight">FastBorn?</span></div>
+
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="icon"><i data-lucide="mouse-pointer-click"></i></div>
+                    <div class="feature-text"><h3>Zero-Touch</h3>
+                    <p>Plug USB, power on, don't touch anything. Starts in 3 seconds.</p></div>
+                </div>
+                <div class="feature-card">
+                    <div class="icon"><i data-lucide="zap"></i></div>
+                    <div class="feature-text"><h3>Parallel Wipe</h3>
+                    <p>All disks (SATA, NVMe, HDD) wiped simultaneously.</p></div>
+                </div>
+                <div class="feature-card">
+                    <div class="icon"><i data-lucide="check-circle"></i></div>
+                    <div class="feature-text"><h3>Verification</h3>
+                    <p>Reads 100 random sectors post-wipe to confirm zeroed.</p></div>
+                </div>
+                <div class="feature-card">
+                    <div class="icon"><i data-lucide="file-json"></i></div>
+                    <div class="feature-text"><h3>JSON Log</h3>
+                    <p>Erasure report per disk. Enterprise-grade audit trail.</p></div>
+                </div>
+                <div class="feature-card">
+                    <div class="icon"><i data-lucide="archive"></i></div>
+                    <div class="feature-text"><h3>~20MB ISO</h3>
+                    <p>Runs from RAM. Never touches disks during boot.</p></div>
+                </div>
+                <div class="feature-card">
+                    <div class="icon"><i data-lucide="refresh-cw"></i></div>
+                    <div class="feature-text"><h3>Auto-Reboot</h3>
+                    <p>Auto restart after wipe. Pull USB, insert OS media.</p></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- VS COMPARISON -->
+    <section>
+        <div class="container">
+            <div class="section-header">// COMPARISON</div>
+            <div class="section-title">FastBorn vs <span class="highlight">DBAN</span> vs <span
+                    class="highlight">nwipe</span></div>
+
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Feature</th>
+                        <th>FastBorn</th>
+                        <th>DBAN</th>
+                        <th>nwipe</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Zero-touch</td>
+                        <td class="check">&#x2588; YES</td>
+                        <td class="cross">- NO</td>
+                        <td class="cross">- NO</td>
+                    </tr>
+                    <tr>
+                        <td>NVMe support</td>
+                        <td class="check">&#x2588; YES</td>
+                        <td class="cross">- NO</td>
+                        <td class="check">&#x2588; YES</td>
+                    </tr>
+                    <tr>
+                        <td>Quick mode</td>
+                        <td class="check">&#x2588; YES</td>
+                        <td class="cross">- NO</td>
+                        <td class="check">&#x2588; YES</td>
+                    </tr>
+                    <tr>
+                        <td>JSON log</td>
+                        <td class="check">&#x2588; YES</td>
+                        <td class="cross">- NO</td>
+                        <td class="cross">- NO</td>
+                    </tr>
+                    <tr>
+                        <td>Verification</td>
+                        <td class="check">&#x2588; YES</td>
+                        <td class="cross">- NO</td>
+                        <td class="cross">- NO</td>
+                    </tr>
+                    <tr>
+                        <td>Auto-reboot</td>
+                        <td class="check">&#x2588; YES</td>
+                        <td class="cross">- NO</td>
+                        <td class="cross">- NO</td>
+                    </tr>
+                    <tr>
+                        <td>Modern kernel</td>
+                        <td class="check">&#x2588; 6.6 LTS</td>
+                        <td class="cross">- 2.6.x</td>
+                        <td>~ depends on distro</td>
+                    </tr>
+                    <tr>
+                        <td>Bootable ISO</td>
+                        <td class="check">&#x2588; YES</td>
+                        <td class="check">&#x2588; YES</td>
+                        <td class="cross">- needs ShredOS</td>
+                    </tr>
+                    <tr>
+                        <td>Active development</td>
+                        <td class="check">&#x2588; YES</td>
+                        <td class="cross">- Sold to Blancco</td>
+                        <td class="check">&#x2588; YES</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- INSTALL -->
+    <section>
+        <div class="container">
+            <div class="section-header">// INSTALL</div>
+            <div class="section-title">Write to <span class="highlight">USB</span></div>
+
+            <div>
+                <div class="install-tabs">
+                    <button class="install-tab active" onclick="showTab('windows')">Windows</button>
+                    <button class="install-tab" onclick="showTab('macos')">macOS</button>
+                    <button class="install-tab" onclick="showTab('linux')">Linux</button>
+                </div>
+
+                <div id="tab-windows" class="install-content active">
+                    <div class="install-panel">
+                        <div class="step"><span class="step-num">1.</span> Download <a href="https://rufus.ie"
+                                style="color:var(--cyan)" target="_blank" rel="noopener">Rufus</a> (portable, no install needed)</div>
+                        <div class="step"><span class="step-num">2.</span> Plug in USB flash drive</div>
+                        <div class="step"><span class="step-num">3.</span> Device: select USB | Boot selection:
+                            <code>fastborn.iso</code></div>
+                        <div class="step"><span class="step-num">4.</span> Partition: <code>MBR</code> | Target:
+                            <code>BIOS or UEFI</code></div>
+                        <div class="step"><span class="step-num">5.</span> START &rarr; select <strong
+                                style="color:var(--yellow)">DD Image</strong> mode &rarr; OK</div>
+                    </div>
+                </div>
+
+                <div id="tab-macos" class="install-content">
+                    <div class="install-panel">
+                        <div class="step"><code>diskutil list</code> <span class="output"># find your USB disk number</span></div>
+                        <div class="step"><code>diskutil unmountDisk /dev/diskX</code></div>
+                        <div class="step"><code>sudo dd if=fastborn.iso of=/dev/rdiskX bs=1m status=progress</code>
+                        </div>
+                        <div class="step"><code>diskutil eject /dev/diskX</code></div>
+                    </div>
+                </div>
+
+                <div id="tab-linux" class="install-content">
+                    <div class="install-panel">
+                        <div class="step"><code>lsblk</code> <span class="output"># find your USB device</span></div>
+                        <div class="step">
+                            <code>sudo dd if=fastborn.iso of=/dev/sdX bs=1M status=progress conv=fsync</code></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="hash-block">
+                <div>
+                    <div class="hash-label">MD5 CHECKSUM</div>
+                    <div class="hash-value">377a24b63f53475099860d8f57a090a5</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- JSON LOG -->
+    <section>
+        <div class="container">
+            <div class="section-header">// LOGGING</div>
+            <div class="section-title">JSON <span class="highlight">Erasure Report</span></div>
+            <p style="font-size:0.8rem;margin-bottom:24px;color:#888">Automatically written to USB under <code
+                    style="color:var(--green)">/fastborn-logs/</code> for each disk.</p>
+
+            <div class="json-block">
+                <pre>
+{
+  <span class="json-key">"tool"</span>: <span class="json-string">"FastBorn v1.0"</span>,
+  <span class="json-key">"timestamp"</span>: <span class="json-string">"2026-03-20T14:30:00Z"</span>,
+  <span class="json-key">"hostname"</span>: <span class="json-string">"PC-042"</span>,
+  <span class="json-key">"disk"</span>: {
+    <span class="json-key">"device"</span>: <span class="json-string">"/dev/sda"</span>,
+    <span class="json-key">"model"</span>: <span class="json-string">"WDC WD5000AAKX"</span>,
+    <span class="json-key">"serial"</span>: <span class="json-string">"WD-ABC123"</span>,
+    <span class="json-key">"size"</span>: <span class="json-string">"465GB"</span>,
+    <span class="json-key">"size_bytes"</span>: <span class="json-number">500107862016</span>
+  },
+  <span class="json-key">"erasure"</span>: {
+    <span class="json-key">"method"</span>: <span class="json-string">"quick-1pass-zero"</span>,
+    <span class="json-key">"duration_seconds"</span>: <span class="json-number">1024</span>,
+    <span class="json-key">"status"</span>: <span class="json-string">"success"</span>
+  },
+  <span class="json-key">"verification"</span>: {
+    <span class="json-key">"result"</span>: <span class="json-string">"PASS"</span>,
+    <span class="json-key">"sectors_checked"</span>: <span class="json-number">100</span>
+  }
+}</pre>
+            </div>
+        </div>
+    </section>
+
+    <!-- WARNING -->
+    <section class="warning-section">
+        <div class="container">
+            <div class="warning-banner">
+                <div class="warning-header">
+                    <i data-lucide="alert-triangle"></i>
+                    <span>Classified — Operational Warning</span>
+                </div>
+                <div class="warning-body">
+                    <div class="warn-headline">This tool performs irreversible military-grade<br>data destruction. There is no undo.</div>
+                    <ul class="warning-items">
+                        <li><strong>All internal disks</strong> are wiped on boot — no confirmation prompt in auto mode</li>
+                        <li>Data destroyed with DoD 5220.22-M (7-pass) is <strong>unrecoverable by any known method</strong></li>
+                        <li>Do not insert this USB into the wrong machine — <strong>you will lose everything</strong></li>
+                        <li>USB boot drive is auto-excluded (<strong>removable=1</strong> detection) — but verify your setup</li>
+                        <li>5-second abort window before erasure begins — <strong>Ctrl+C</strong> to cancel</li>
+                    </ul>
+                </div>
+                <div class="warning-footer">FastBorn v1.0 — Use at your own risk — No warranty expressed or implied</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- BUILD FROM SOURCE -->
+    <section>
+        <div class="container">
+            <div class="section-header">// BUILD</div>
+            <div class="section-title">Build from <span class="highlight">Source</span></div>
+
+            <div class="terminal">
+                <div class="terminal-bar">
+                    <div class="terminal-dot red"></div>
+                    <div class="terminal-dot yellow"></div>
+                    <div class="terminal-dot green"></div>
+                    <div class="terminal-title">terminal</div>
+                </div>
+                <div class="terminal-body">
+                    <span class="prompt">$</span> <span class="command">git clone
+                        https://github.com/badursun/Fastborn.git</span>
+                    <span class="prompt">$</span> <span class="command">cd Fastborn</span>
+                    <span class="prompt">$</span> <span class="command">chmod +x build.sh && ./build.sh</span>
+                    <span class="output">
+                        Building Docker image...
+                        Running ISO builder inside Docker container...
+                    </span><span class="success">ISO created successfully!</span>
+                    <span class="output">
+                        File: output/fastborn.iso
+                        Size: 20M</span>
+                </div>
+            </div>
+            <p style="font-size:0.75rem;color:#666;margin-top:16px">Requires: Docker Desktop</p>
+        </div>
+    </section>
+
+    <!-- footer removed — links moved to hero -->
+</div><!-- /pageable -->
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        // === Minimal fullpage scroll engine ===
+        (function() {
+            const wrapper = document.getElementById('pageable');
+            const sections = wrapper.querySelectorAll('section');
+            const total = sections.length;
+            let current = 0;
+            let isAnimating = false;
+            const COOLDOWN = 700; // ms between transitions
+
+            function goTo(index) {
+                if (index < 0 || index >= total || isAnimating) return;
+                isAnimating = true;
+                current = index;
+                wrapper.style.transform = 'translateY(-' + (current * 100) + 'vh)';
+                setTimeout(() => { isAnimating = false; }, COOLDOWN);
+            }
+
+            // Wheel — ignore ALL events during cooldown
+            wrapper.addEventListener('wheel', function(e) {
+                e.preventDefault();
+                if (isAnimating) return;
+
+                // Allow inner scrollable areas
+                const scrollable = e.target.closest('.terminal-body, .comparison-table, .json-block, .install-panel');
+                if (scrollable) {
+                    const atTop = scrollable.scrollTop <= 0;
+                    const atBottom = scrollable.scrollTop + scrollable.clientHeight >= scrollable.scrollHeight - 2;
+                    if ((e.deltaY < 0 && !atTop) || (e.deltaY > 0 && !atBottom)) {
+                        scrollable.scrollTop += e.deltaY;
+                        return;
+                    }
+                }
+
+                if (Math.abs(e.deltaY) > 5) {
+                    goTo(current + (e.deltaY > 0 ? 1 : -1));
+                }
+            }, { passive: false });
+
+            // Touch
+            let touchStartY = 0;
+            wrapper.addEventListener('touchstart', function(e) {
+                touchStartY = e.touches[0].clientY;
+            }, { passive: true });
+
+            wrapper.addEventListener('touchend', function(e) {
+                const diff = touchStartY - e.changedTouches[0].clientY;
+                if (Math.abs(diff) > 40) {
+                    goTo(current + (diff > 0 ? 1 : -1));
+                }
+            }, { passive: true });
+
+            // Keyboard
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ') {
+                    e.preventDefault();
+                    goTo(current + 1);
+                } else if (e.key === 'ArrowUp' || e.key === 'PageUp') {
+                    e.preventDefault();
+                    goTo(current - 1);
+                } else if (e.key === 'Home') {
+                    e.preventDefault();
+                    goTo(0);
+                } else if (e.key === 'End') {
+                    e.preventDefault();
+                    goTo(total - 1);
+                }
+            });
+        })();
+
+        function showTab(name) {
+            document.querySelectorAll('.install-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.install-content').forEach(c => c.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById('tab-' + name).classList.add('active');
+        }
+
+        /* Boot sequence animation */
+        (function () {
+            const lines = [
+                { text: 'SeaBIOS (version rel-1.17.0)', cls: 'output', delay: 0 },
+                { text: 'Machine UUID: a8f3c2e1-7b4d-4e9a-b6f1-2d8e0c3a5f7b', cls: 'output', delay: 100 },
+                { text: 'Booting from DVD/CD...', cls: 'output', delay: 400 },
+                { text: '', cls: '', delay: 200 },
+                { text: 'Welcome to GRUB!', cls: 'command', delay: 600 },
+                { text: '  FastBorn -- Quick Erase (1-pass zero) [DEFAULT]', cls: 'output', delay: 300 },
+                { text: '> FastBorn -- Full Erase (DoD 7-pass) <<<', cls: 'error', delay: 200 },
+                { text: '', cls: '', delay: 300 },
+                { text: "Booting 'FastBorn -- Full Erase (DoD 7-pass)'...", cls: 'command', delay: 800 },
+                { text: '', cls: '', delay: 600 },
+                { text: '  ███████╗ █████╗ ███████╗████████╗██████╗  ██████╗ ██████╗ ███╗   ██╗', cls: 'error', delay: 100, pre: true },
+                { text: '  ██╔════╝██╔══██╗██╔════╝╚══██╔══╝██╔══██╗██╔═══██╗██╔══██╗████╗  ██║', cls: 'error', delay: 50, pre: true },
+                { text: '  █████╗  ███████║███████╗   ██║   ██████╔╝██║   ██║██████╔╝██╔██╗ ██║', cls: 'error', delay: 50, pre: true },
+                { text: '  ██╔══╝  ██╔══██║╚════██║   ██║   ██╔══██╗██║   ██║██╔══██╗██║╚██╗██║', cls: 'error', delay: 50, pre: true },
+                { text: '  ██║     ██║  ██║███████║   ██║   ██████╔╝╚██████╔╝██║  ██║██║ ╚████║', cls: 'error', delay: 50, pre: true },
+                { text: '  ╚═╝     ╚═╝  ╚═╝╚══════╝   ╚═╝   ╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═══╝', cls: 'error', delay: 50, pre: true },
+                { text: '', cls: '', delay: 100 },
+                { text: '         Secure Disk Erasure Tool v1.0 — Full Mode DoD 5220.22-M (7-pass)', cls: 'prompt', delay: 200 },
+                { text: '         Boot successful — Running from RAM — Disks safe until erasure', cls: 'prompt', delay: 200 },
+                { text: '', cls: '', delay: 800 },
+                { text: '[*] Scanning for target disks...', cls: 'warning', delay: 600 },
+                { text: '    Checking /sys/block/sda    removable=0  size=976773168', cls: 'output', delay: 150 },
+                { text: '    Checking /sys/block/sdb    removable=0  size=488397168', cls: 'output', delay: 150 },
+                { text: '    Checking /sys/block/nvme0n1 removable=0  size=500118192', cls: 'output', delay: 150 },
+                { text: '    Checking /sys/block/sdc    removable=1  SKIP (USB boot drive)', cls: 'warning', delay: 150 },
+                { text: '', cls: '', delay: 300 },
+                { text: '[+] Target disks found:', cls: 'success', delay: 400 },
+                { text: '    /dev/sda     — WDC WD5000AAKX      — 465 GB  — S/N: WD-WCC2T1835421', cls: 'command', delay: 200 },
+                { text: '    /dev/sdb     — Seagate ST250DM000   — 232 GB  — S/N: Z2A4HKXL', cls: 'command', delay: 200 },
+                { text: '    /dev/nvme0n1 — Samsung SSD 970 EVO  — 238 GB  — S/N: S4EVNX0R712345K', cls: 'command', delay: 200 },
+                { text: '', cls: '', delay: 300 },
+                { text: '[*] Mode: FULL — DoD 5220.22-M (7-pass)', cls: 'error', delay: 400 },
+                { text: '    Pass sequence: 0x00 → 0xFF → Random → 0x00 → 0xFF → Random → Random', cls: 'output', delay: 200 },
+                { text: '    Estimated time: ~2h 15m for 935 GB total', cls: 'output', delay: 200 },
+                { text: '', cls: '', delay: 300 },
+                { text: '[!] ALL DATA ON 3 DISKS (935 GB) WILL BE PERMANENTLY DESTROYED', cls: 'error', delay: 500 },
+                { text: '    This operation is IRREVERSIBLE. Military-grade erasure.', cls: 'error', delay: 300 },
+                { text: '    Erasure starts in 5 seconds... (Ctrl+C to abort)', cls: 'warning', delay: 1200 },
+                { text: '', cls: '', delay: 200 },
+                { text: '[*] Starting nwipe — method: dod522022m — prng: mersenne', cls: 'prompt', delay: 800 },
+                { text: '', cls: '', delay: 200 },
+                { text: '    Pass 1/7 [0x00]', cls: 'warning', delay: 400 },
+                { text: '    /dev/sda     [######--------------]  28%   98MB/s  ETA 52m', cls: 'output', delay: 700 },
+                { text: '    /dev/sdb     [##########----------]  51%  102MB/s  ETA 18m', cls: 'output', delay: 500 },
+                { text: '    /dev/nvme0n1 [#############-------]  67%  412MB/s  ETA 6m', cls: 'output', delay: 500 },
+                { text: '    /dev/nvme0n1 [####################] 100%  pass 1 complete', cls: 'success', delay: 600, replace2: true },
+                { text: '    /dev/sdb     [####################] 100%  pass 1 complete', cls: 'success', delay: 500, replace2: true },
+                { text: '    /dev/sda     [####################] 100%  pass 1 complete', cls: 'success', delay: 700, replace2: true },
+                { text: '', cls: '', delay: 200 },
+                { text: '    Pass 2/7 [0xFF]', cls: 'warning', delay: 300 },
+                { text: '    /dev/sda     [########------------]  41%   97MB/s', cls: 'output', delay: 600 },
+                { text: '    /dev/sda     [####################] 100%  pass 2 complete', cls: 'success', delay: 600, replace2: true },
+                { text: '    Pass 3/7 [Random — Mersenne Twister]', cls: 'warning', delay: 300 },
+                { text: '    /dev/sda     [###########---------]  55%   71MB/s', cls: 'output', delay: 600 },
+                { text: '    /dev/sda     [####################] 100%  pass 3 complete', cls: 'success', delay: 600, replace2: true },
+                { text: '    Pass 4/7 [0x00]  ...', cls: 'warning', delay: 300 },
+                { text: '    Pass 5/7 [0xFF]  ...', cls: 'warning', delay: 400, replace: true },
+                { text: '    Pass 6/7 [Random]  ...', cls: 'warning', delay: 400, replace: true },
+                { text: '    Pass 7/7 [Random — final]  ...', cls: 'warning', delay: 400, replace: true },
+                { text: '    Pass 7/7 [Random — final]  COMPLETE', cls: 'success', delay: 600, replace: true },
+                { text: '', cls: '', delay: 200 },
+                { text: '[+] nwipe completed — 7 passes on 3 disks in 8143s (2h 15m 43s)', cls: 'success', delay: 500 },
+                { text: '', cls: '', delay: 300 },
+                { text: '[*] Running verification pass...', cls: 'prompt', delay: 600 },
+                { text: '  Verifying /dev/sda — reading 100 random sectors...', cls: 'prompt', delay: 300 },
+                { text: '  ✓ /dev/sda — Verification PASSED (100/100 sectors zeroed)', cls: 'success', delay: 400 },
+                { text: '  Verifying /dev/sdb — reading 100 random sectors...', cls: 'prompt', delay: 300 },
+                { text: '  ✓ /dev/sdb — Verification PASSED (100/100 sectors zeroed)', cls: 'success', delay: 400 },
+                { text: '  Verifying /dev/nvme0n1 — reading 100 random sectors...', cls: 'prompt', delay: 300 },
+                { text: '  ✓ /dev/nvme0n1 — Verification PASSED (100/100 sectors zeroed)', cls: 'success', delay: 400 },
+                { text: '', cls: '', delay: 300 },
+                { text: '[*] Writing logs to USB...', cls: 'prompt', delay: 400 },
+                { text: '  Log: /mnt/usb/fastborn-logs/fastborn_sda_20260320T163543Z.json', cls: 'success', delay: 200 },
+                { text: '  Log: /mnt/usb/fastborn-logs/fastborn_sdb_20260320T163543Z.json', cls: 'success', delay: 200 },
+                { text: '  Log: /mnt/usb/fastborn-logs/fastborn_nvme0n1_20260320T163543Z.json', cls: 'success', delay: 200 },
+                { text: '', cls: '', delay: 500 },
+                { text: '  ██████╗  ██████╗ ███╗   ██╗███████╗', cls: 'success', delay: 100, pre: true },
+                { text: '  ██╔══██╗██╔═══██╗████╗  ██║██╔════╝', cls: 'success', delay: 50, pre: true },
+                { text: '  ██║  ██║██║   ██║██╔██╗ ██║█████╗', cls: 'success', delay: 50, pre: true },
+                { text: '  ██║  ██║██║   ██║██║╚██╗██║██╔══╝', cls: 'success', delay: 50, pre: true },
+                { text: '  ██████╔╝╚██████╔╝██║ ╚████║███████╗', cls: 'success', delay: 50, pre: true },
+                { text: '  ╚═════╝  ╚═════╝ ╚═╝  ╚═══╝╚══════╝', cls: 'success', delay: 50, pre: true },
+                { text: '', cls: '', delay: 200 },
+                { text: '    All 3 disks erased (7-pass DoD) and verified successfully.', cls: 'success', delay: 400 },
+                { text: '    935 GB destroyed in 2h 15m 43s — 0 verification errors', cls: 'success', delay: 300 },
+                { text: '    Remove USB drive and insert OS installation media.', cls: 'prompt', delay: 400 },
+                { text: '', cls: '', delay: 500 },
+                { text: '    Rebooting in 3s...', cls: 'prompt', delay: 1000 },
+                { text: '    Rebooting in 2s...', cls: 'prompt', delay: 1000, replace: true },
+                { text: '    Rebooting in 1s...', cls: 'prompt', delay: 1000, replace: true },
+                { text: '', cls: '', delay: 500 },
+                { text: '--- SYSTEM REBOOT ---', cls: 'error', delay: 0 },
+            ];
+
+            const terminal = document.getElementById('boot-terminal');
+            const placeholder = document.getElementById('boot-placeholder');
+            let running = false;
+            let timeouts = [];
+
+            function resetSequence() {
+                timeouts.forEach(t => clearTimeout(t));
+                timeouts = [];
+                running = false;
+            }
+
+            function runSequence() {
+                if (running) return;
+                running = true;
+                terminal.innerHTML = '';
+
+                let countdownEl = null;
+                let progressEls = [];
+                let totalDelay = 0;
+
+                lines.forEach((line, i) => {
+                    totalDelay += line.delay;
+                    const tid = setTimeout(() => {
+                        if (line.replace && countdownEl) {
+                            countdownEl.textContent = line.text;
+                            countdownEl.className = line.cls;
+                            terminal.scrollTop = terminal.scrollHeight;
+                            return;
+                        }
+
+                        if (line.replace2 && progressEls.length > 0) {
+                            const devName = line.text.trim().split(' ')[0];
+                            const existing = progressEls.find(el => el.textContent.trim().startsWith(devName));
+                            if (existing) {
+                                existing.textContent = line.text;
+                                existing.className = line.cls;
+                                terminal.scrollTop = terminal.scrollHeight;
+                                return;
+                            }
+                        }
+
+                        if (line.text === '') {
+                            terminal.appendChild(document.createElement('br'));
+                            countdownEl = null;
+                        } else {
+                            const el = document.createElement(line.pre ? 'pre' : 'div');
+                            el.textContent = line.text;
+                            el.className = line.cls;
+                            if (line.pre) {
+                                el.style.margin = '0';
+                                el.style.padding = '0';
+                                el.style.fontSize = 'clamp(0.35rem, 1.2vw, 0.75rem)';
+                                el.style.lineHeight = '1.15';
+                                el.style.fontFamily = "'JetBrains Mono', monospace";
+                            }
+                            terminal.appendChild(el);
+
+                            if (line.text.includes('Auto-selecting in') || line.text.includes('Rebooting in')) {
+                                countdownEl = el;
+                            }
+                            if (line.text.includes('/dev/') && (line.text.includes('[#') || line.text.includes('DONE'))) {
+                                progressEls.push(el);
+                            }
+                        }
+
+                        terminal.scrollTop = terminal.scrollHeight;
+                    }, totalDelay);
+                    timeouts.push(tid);
+                });
+
+                // After sequence ends: wait 4s then reset and replay
+                const restartTid = setTimeout(() => {
+                    resetSequence();
+                    runSequence();
+                }, totalDelay + 4000);
+                timeouts.push(restartTid);
+            }
+
+            // Intersection Observer — start when visible, pause when not
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        if (placeholder && placeholder.parentNode) placeholder.remove();
+                        runSequence();
+                    } else {
+                        resetSequence();
+                        terminal.innerHTML = '<div style="color:#333;font-size:0.75rem">Scroll here to watch boot sequence...</div>';
+                    }
+                });
+            }, { threshold: 0.3 });
+
+            observer.observe(terminal);
+        })();
+    </script>
+
+</body>
+
+</html>
