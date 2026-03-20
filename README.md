@@ -1,125 +1,87 @@
 # FastBorn — Secure Disk Erasure Tool
 
-Bootable USB ile çalışan, sıfır dokunuşlu (zero-touch) disk silme aracı. Internet kafe, ofis, okul lab gibi ortamlarda onlarca makineyi hızla sıfırlamak için tasarlandı.
+> Zero-touch bootable USB disk silme aracı. USB tak, aç, bekle, bitti.
 
-## Özellikler
+[![GitHub Release](https://img.shields.io/github/v/release/badursun/Fastborn)](https://github.com/badursun/Fastborn/releases/latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![ISO Size](https://img.shields.io/badge/ISO_Size-~20MB-blue)](#)
 
-- **Zero-touch** — USB tak, makineyi aç, hiçbir tuşa basma. Otomatik çalışır
-- **2 Mod** — Quick (1-pass zero, ~15-20dk) ve Full (DoD 7-pass, ~2+ saat)
-- **Quick mode default** — 3 saniye GRUB menüsünde bekler, geçilmezse Quick başlar
-- **Paralel silme** — Tüm diskler aynı anda silinir (NVMe dahil)
-- **Verification** — Silme sonrası 100 rastgele sektör okunarak doğrulama
-- **JSON log** — Sonuçlar USB'ye otomatik yazılır (kurumsal kanıt)
-- **Auto-reboot** — Bitti, otomatik restart. Windows CD tak, kur
-- **~80MB ISO** — RAM'den çalışır, hedef disklere boot sırasında dokunmaz
-- **BIOS + UEFI** — Her iki boot modunu destekler
+---
 
-## Gereksinimler
+## Hızlı Başlangıç
 
-- **Docker Desktop** (macOS, Linux veya Windows)
-- USB flash drive (minimum 256MB)
+### 1. ISO'yu İndir
 
-## Build
+**[fastborn.iso indir (v1.0)](https://github.com/badursun/Fastborn/releases/latest/download/fastborn.iso)** — ~20MB
 
-```bash
-git clone https://github.com/badursun/fastborn.git
-cd fastborn
-chmod +x build.sh
-./build.sh
+### 2. USB'ye Yaz
+
+| Platform | Komut / Araç |
+|----------|-------------|
+| **Windows** | [Rufus](https://rufus.ie) ile DD Image modunda yaz |
+| **macOS** | `sudo dd if=fastborn.iso of=/dev/rdiskX bs=1m` |
+| **Linux** | `sudo dd if=fastborn.iso of=/dev/sdX bs=1M` |
+
+### 3. Kullan
+
+```
+USB tak → Makineyi aç → GRUB menüsü gelir (3sn) → Quick Erase otomatik başlar
+→ Diskler silinir → Doğrulanır → Log USB'ye yazılır → Otomatik reboot
+→ USB çek → Windows CD/USB tak → Kur
 ```
 
-Build çıktısı: `output/fastborn.iso`
+---
 
-## USB'ye Yazma (macOS)
+## Neden FastBorn?
 
-```bash
-# USB diskini bul
-diskutil list
+Internet kafe, ofis, okul lab gibi ortamlarda **50+ makineyi hızla sıfırlamak** için tasarlandı. DBAN öldü (Blancco'ya satıldı), nwipe tek başına bootable değil. FastBorn ikisinin de iyisini yapıyor:
 
-# USB'yi unmount et (X = disk numarası)
-diskutil unmountDisk /dev/diskX
+| Özellik | FastBorn | DBAN | nwipe |
+|---------|:--------:|:----:|:-----:|
+| Zero-touch (dokunma, çalışır) | :white_check_mark: | :x: | :x: |
+| NVMe desteği | :white_check_mark: | :x: | :white_check_mark: |
+| Quick mode (1-pass) | :white_check_mark: | :x: | :white_check_mark: |
+| JSON silme raporu | :white_check_mark: | :x: | :x: |
+| Verification (doğrulama) | :white_check_mark: | :x: | :x: |
+| Auto-reboot | :white_check_mark: | :x: | :x: |
+| Modern kernel | :white_check_mark: | :x: | ~ |
+| Bootable ISO | :white_check_mark: | :white_check_mark: | :x: |
 
-# ISO'yu yaz
-sudo dd if=output/fastborn.iso of=/dev/rdiskX bs=1m status=progress
-
-# USB'yi çıkar
-diskutil eject /dev/diskX
-```
-
-## USB'ye Yazma (Windows)
-
-### Yöntem 1: Rufus (Önerilen)
-
-1. [rufus.ie](https://rufus.ie) adresinden Rufus'u indir (portable, kurulum gerektirmez)
-2. USB flash drive'ı tak
-3. Rufus'u çalıştır:
-   - **Device:** USB drive'ını seç
-   - **Boot selection:** "Disk or ISO image" → SELECT → `fastborn.iso` seç
-   - **Partition scheme:** MBR (BIOS uyumluluğu için)
-   - **Target system:** BIOS or UEFI
-   - **File system:** FAT32
-   - START'a bas
-4. "Write in DD Image mode" uyarısı çıkarsa **DD Image** seç → OK
-
-### Yöntem 2: balenaEtcher
-
-1. [etcher.balena.io](https://etcher.balena.io) adresinden Etcher'ı indir
-2. "Flash from file" → `fastborn.iso` seç
-3. "Select target" → USB drive seç
-4. "Flash!" bas
-
-### Yöntem 3: PowerShell (Komut Satırı)
-
-```powershell
-# 1. USB disk numarasını bul
-Get-Disk | Where-Object BusType -eq 'USB'
-
-# 2. USB'yi temizle (X = disk numarası)
-# DİKKAT: Doğru diski seçtiğinden emin ol!
-$disk = Get-Disk -Number X
-$disk | Clear-Disk -RemoveData -Confirm:$false
-
-# 3. ISO'yu yaz
-$iso = "C:\path\to\fastborn.iso"
-$usb = "\\.\PhysicalDriveX"
-dd.exe if=$iso of=$usb bs=1M status=progress
-
-# dd.exe yoksa Git Bash veya WSL üzerinden:
-# dd if=/mnt/c/path/to/fastborn.iso of=/dev/sdX bs=1M status=progress
-```
-
-> **Not:** Windows'ta en kolay yöntem Rufus'tur. DD Image modunda yazınca birebir ISO kopyası oluşur.
-
-## Kullanım
-
-1. USB'yi makineye tak
-2. Makineyi USB'den boot et (BIOS'ta boot order ayarla)
-3. GRUB menüsü gelir:
-   - **Quick Erase (default)** — 3 saniye bekler, otomatik başlar
-   - **Full Erase** — Manuel seçim gerekir
-4. Silme tamamlanır, doğrulama yapılır, log USB'ye yazılır
-5. Makine otomatik reboot eder
-6. USB'yi çek, Windows kurulum CD/USB'sini tak
+---
 
 ## Silme Modları
 
-### Quick Mode (1-pass zero)
-- Tüm sektörlere 0x00 yazar
-- MBR dahil
-- ~80GB disk için ~15-20 dakika
-- MBR virüs temizliği ve hızlı sıfırlama için yeterli
+### Quick Mode (Default)
+- **1-pass zero fill** — tüm sektörlere 0x00 yazar
+- MBR dahil her şey silinir
+- ~80GB disk icin **~15-20 dakika**
+- Internet kafe senaryosu icin ideal
 
-### Full Mode (DoD 5220.22-M — 7-pass)
-- Pass 1: 0x00
-- Pass 2: 0xFF
-- Pass 3: Random
-- Pass 4-7: Tekrar
-- ~80GB disk için ~2+ saat
-- Hassas veri imhası için
+### Full Mode (DoD 5220.22-M)
+- **7-pass** — 0x00 → 0xFF → Random → tekrar (x7)
+- Askeri standart veri imhası
+- ~80GB disk icin **~2+ saat**
+- Hassas veri icin
 
-## Log Formatı
+GRUB menüsünde 3 saniye bekler. Hiçbir tuşa basmazsan **Quick mode** otomatik başlar.
 
-Her silme işlemi sonrası USB'ye `/fastborn-logs/` altına JSON dosyası yazılır:
+---
+
+## Özellikler
+
+- **Paralel silme** — Birden fazla disk aynı anda silinir (NVMe dahil)
+- **Verification pass** — Silme sonrası 100 rastgele sektör okunarak sıfırlandığı doğrulanır
+- **JSON log** — Her disk için detaylı rapor USB'ye yazılır (`/fastborn-logs/`)
+- **Auto-reboot** — İş bitince 5 saniye geri sayım, otomatik restart
+- **BIOS + UEFI** — Her iki boot modunu destekler
+- **~20MB ISO** — RAM'den çalışır, boot sırasında disklere dokunmaz
+- **USB koruması** — Boot USB'si otomatik hariç tutulur (removable=1)
+
+---
+
+## JSON Log Örneği
+
+Her silme işlemi sonrası USB'ye `/fastborn-logs/` altına otomatik yazılır:
 
 ```json
 {
@@ -146,25 +108,82 @@ Her silme işlemi sonrası USB'ye `/fastborn-logs/` altına JSON dosyası yazıl
 }
 ```
 
+---
+
+## USB'ye Yazma (Detaylı)
+
+### Windows (Rufus — Önerilen)
+
+1. [rufus.ie](https://rufus.ie) adresinden Rufus'u indir (portable, kurulum gerektirmez)
+2. USB flash drive'ı tak
+3. Rufus'u çalıştır:
+   - **Device:** USB drive'ını seç
+   - **Boot selection:** "Disk or ISO image" → SELECT → `fastborn.iso` seç
+   - **Partition scheme:** MBR
+   - **Target system:** BIOS or UEFI
+   - START'a bas
+4. "Write in DD Image mode" uyarısı çıkarsa **DD Image** seç → OK
+
+### Windows (balenaEtcher — Alternatif)
+
+1. [etcher.balena.io](https://etcher.balena.io) adresinden Etcher'ı indir
+2. "Flash from file" → `fastborn.iso` seç
+3. "Select target" → USB drive seç
+4. "Flash!" bas
+
+### macOS
+
+```bash
+# USB disk numarasını bul
+diskutil list
+
+# USB'yi unmount et (X = disk numarası)
+diskutil unmountDisk /dev/diskX
+
+# ISO'yu yaz (rdisk = hızlı)
+sudo dd if=fastborn.iso of=/dev/rdiskX bs=1m status=progress
+
+# USB'yi çıkar
+diskutil eject /dev/diskX
+```
+
+### Linux
+
+```bash
+# USB disk yolunu bul
+lsblk
+
+# ISO'yu yaz (X = disk harfi, örn: sdb)
+sudo dd if=fastborn.iso of=/dev/sdX bs=1M status=progress conv=fsync
+```
+
+---
+
+## Kaynaktan Build Etme
+
+Docker Desktop kurulu olmalı.
+
+```bash
+git clone https://github.com/badursun/Fastborn.git
+cd Fastborn
+chmod +x build.sh
+./build.sh
+```
+
+Çıktı: `output/fastborn.iso`
+
+---
+
 ## Güvenlik Uyarıları
 
-- **GERİ DÖNÜŞÜ YOKTUR** — Silinen veriler kurtarılamaz
-- USB boot diski otomatik olarak hariç tutulur (removable=1)
+> **GERİ DÖNÜŞÜ YOKTUR** — FastBorn ile silinen veriler kurtarılamaz.
+
+- USB boot diski otomatik olarak hariç tutulur (removable=1 tespiti)
 - ISO RAM'den çalışır, boot sırasında hedef disklere dokunmaz
 - Silme başlamadan önce 5 saniye bekleme süresi vardır (Ctrl+C ile iptal)
+- Yanlış makineye takmayın — taktığınız anda o makinenin tüm diskleri silinir
 
-## DBAN/nwipe ile Karşılaştırma
-
-| Özellik | FastBorn | DBAN | nwipe |
-|---------|----------|------|-------|
-| Zero-touch | ✅ | ❌ (menü seçimi) | ❌ (CLI) |
-| NVMe desteği | ✅ | ❌ | ✅ |
-| Quick mode | ✅ | ❌ | ✅ |
-| JSON log | ✅ | ❌ | ❌ |
-| Verification | ✅ | ❌ | ❌ |
-| Auto-reboot | ✅ | ❌ | ❌ |
-| Modern kernel | ✅ | ❌ (2.6.x) | Dağıtıma bağlı |
-| Bootable ISO | ✅ | ✅ | ❌ (ShredOS gerekli) |
+---
 
 ## Lisans
 
