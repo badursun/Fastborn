@@ -1,5 +1,16 @@
 # FastBorn — Secure Disk Erasure Tool
 
+```
+    ███████╗ █████╗ ███████╗████████╗██████╗  ██████╗ ██████╗ ███╗   ██╗
+    ██╔════╝██╔══██╗██╔════╝╚══██╔══╝██╔══██╗██╔═══██╗██╔══██╗████╗  ██║
+    █████╗  ███████║███████╗   ██║   ██████╔╝██║   ██║██████╔╝██╔██╗ ██║
+    ██╔══╝  ██╔══██║╚════██║   ██║   ██╔══██╗██║   ██║██╔══██╗██║╚██╗██║
+    ██║     ██║  ██║███████║   ██║   ██████╔╝╚██████╔╝██║  ██║██║ ╚████║
+    ╚═╝     ╚═╝  ╚═╝╚══════╝   ╚═╝   ╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═══╝
+
+         Secure Disk Erasure Tool — Open Source DBAN Alternative
+```
+
 > Zero-touch bootable USB disk silme aracı. USB tak, aç, bekle, bitti.
 
 [![GitHub Release](https://img.shields.io/github/v/release/badursun/Fastborn)](https://github.com/badursun/Fastborn/releases/latest)
