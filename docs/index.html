@@ -1,1943 +1,1167 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FastBorn — Secure Disk Erasure Tool</title>
-    <meta name="description"
-        content="Zero-touch bootable USB disk erasure tool. Open-source DBAN alternative with Quick & Full wipe modes, verification, JSON logging.">
-    <meta property="og:title" content="FastBorn — Secure Disk Erasure Tool">
-    <meta property="og:description" content="Plug USB. Boot. Wait. Done. Open-source DBAN alternative.">
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://badursun.github.io/Fastborn/">
-    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        :root {
-            --green: #00ff41;
-            --green-dim: #00cc33;
-            --green-dark: #00661a;
-            --red: #ff0040;
-            --cyan: #00e5ff;
-            --yellow: #ffdd00;
-            --bg: #0a0a0a;
-            --bg-light: #111111;
-            --bg-card: #0d1117;
-            --border: #1a3a1a;
-            --text: #b0b0b0;
-        }
-
-        html, body {
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            height: 100%;
-        }
-
-        body {
-            font-family: 'JetBrains Mono', monospace;
-            background: var(--bg);
-            color: var(--text);
-            line-height: 1.7;
-        }
-
-        /* fullpage wrapper */
-        #pageable {
-            height: 100vh;
-            transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
-            will-change: transform;
-        }
-
-        /* === GLITCH HORROR EFFECT === */
-        @keyframes glitch-skew {
-            0%, 100% { transform: skew(0deg); }
-            20% { transform: skew(-2deg); }
-            40% { transform: skew(3deg); }
-            60% { transform: skew(-1deg); }
-            80% { transform: skew(2deg); }
-        }
-
-        @keyframes glitch-shift {
-            0%, 100% { clip-path: inset(0 0 0 0); transform: translateX(0); }
-            10% { clip-path: inset(20% 0 60% 0); transform: translateX(-4px); }
-            20% { clip-path: inset(50% 0 20% 0); transform: translateX(3px); }
-            30% { clip-path: inset(10% 0 70% 0); transform: translateX(-2px); }
-            40% { clip-path: inset(60% 0 10% 0); transform: translateX(5px); }
-            50% { clip-path: inset(0 0 0 0); transform: translateX(0); }
-        }
-
-        @keyframes horror-flash {
-            0%, 100% { opacity: 0; }
-            5% { opacity: 0.15; }
-            10% { opacity: 0; }
-            12% { opacity: 0.1; }
-            14% { opacity: 0; }
-        }
-
-        .ascii-art.horror {
-            color: var(--red) !important;
-            text-shadow: 0 0 10px var(--red), 0 0 40px rgba(255, 0, 64, 0.5), 0 0 80px rgba(255, 0, 64, 0.2) !important;
-            animation: glitch-skew 0.3s ease-in-out;
-        }
-
-        .ascii-art.horror::before,
-        .ascii-art.horror::after {
-            content: attr(data-text);
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            color: var(--red);
-        }
-
-        .ascii-art.horror::before {
-            text-shadow: 2px 0 cyan;
-            animation: glitch-shift 0.4s ease-in-out;
-        }
-
-        .ascii-art.horror::after {
-            text-shadow: -2px 0 yellow;
-            animation: glitch-shift 0.4s ease-in-out reverse;
-        }
-
-        /* Screen flash — inside hero only */
-        .horror-flash {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: var(--red);
-            pointer-events: none;
-            z-index: 5;
-            opacity: 0;
-        }
-
-        .horror-flash.active {
-            animation: horror-flash 0.6s ease-in-out;
-        }
-
-        /* === DISINTEGRATION EFFECT === */
-        .disintegrate-canvas-wrap {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 10;
-        }
-
-        .disintegrate-particle {
-            position: absolute;
-            background-size: cover;
-            will-change: transform, opacity;
-        }
-
-        @keyframes particle-fly {
-            0% {
-                transform: translate(0, 0) rotate(0deg) scale(1);
-                opacity: 1;
-            }
-            20% {
-                opacity: 0.9;
-                transform: translate(calc(var(--tx) * 0.1), calc(var(--ty) * 0.05)) rotate(calc(var(--rot) * 0.1)) scale(0.95);
-            }
-            60% {
-                opacity: 0.5;
-            }
-            100% {
-                transform: translate(var(--tx), var(--ty)) rotate(var(--rot)) scale(0);
-                opacity: 0;
-            }
-        }
-
-        #section-workflow {
-            position: relative;
-        }
-
-        #section-workflow > .container {
-            transition: opacity 1.5s ease-in, filter 1.5s ease-in;
-        }
-
-        #section-workflow.disintegrating > .container {
-            opacity: 0;
-            filter: brightness(2) contrast(0);
-        }
-
-        @keyframes blink {
-
-            0%,
-            100% {
-                opacity: 1;
-            }
-
-            50% {
-                opacity: 0;
-            }
-        }
-
-        @keyframes typewriter {
-            from {
-                width: 0;
-            }
-
-            to {
-                width: 100%;
-            }
-        }
-
-        /* Static glow — no animation, no GPU drain */
-
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .container {
-            max-width: 960px;
-            margin: 0 auto;
-            padding: 0 24px;
-        }
-
-        /* HERO */
-        .hero {
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .ascii-art {
-            color: var(--green);
-            font-family: 'JetBrains Mono', monospace;
-            font-size: clamp(0.35rem, 1.5vw, 0.85rem);
-            white-space: pre;
-            line-height: 1.2;
-            text-shadow: 0 0 10px var(--green), 0 0 30px var(--green-dark);
-            margin-bottom: 24px;
-            position: relative;
-            transition: color 0.15s, text-shadow 0.15s;
-        }
-
-        .hero-subtitle {
-            color: var(--cyan);
-            font-size: 0.9rem;
-            margin-bottom: 8px;
-            letter-spacing: 2px;
-        }
-
-        .hero-tagline {
-            color: var(--text);
-            font-size: 0.8rem;
-            margin-bottom: 40px;
-        }
-
-        .hero-tagline .cursor {
-            animation: blink 1s step-end infinite;
-            color: var(--green);
-        }
-
-        .cta-group {
-            display: flex;
-            gap: 16px;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 14px 28px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.85rem;
-            font-weight: 700;
-            text-decoration: none;
-            border: 2px solid;
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-
-        .btn-primary {
-            color: var(--bg);
-            background: var(--green);
-            border-color: var(--green);
-        }
-
-        .btn-primary:hover {
-            background: transparent;
-            color: var(--green);
-            box-shadow: 0 0 20px var(--green-dark), inset 0 0 20px rgba(0, 255, 65, 0.1);
-        }
-
-        .btn-secondary {
-            color: var(--green);
-            background: transparent;
-            border-color: var(--green-dark);
-        }
-
-        .btn-secondary:hover {
-            border-color: var(--green);
-            box-shadow: 0 0 20px var(--green-dark);
-        }
-
-        .scroll-indicator {
-            position: absolute;
-            bottom: 40px;
-            color: var(--green-dark);
-            font-size: 0.7rem;
-            letter-spacing: 3px;
-            animation: blink 2s ease-in-out infinite;
-        }
-
-        /* SECTIONS — each is exactly 100vh */
-        section {
-            height: 100vh;
-            border-top: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            overflow-y: auto;
-            overflow-x: hidden;
-            padding: 40px 0;
-            box-sizing: border-box;
-        }
-
-        section > .container {
-            width: 100%;
-        }
-
-        .hero {
-            padding: 0;
-            border-top: none;
-        }
-
-        .section-header {
-            color: var(--green);
-            font-size: 0.75rem;
-            letter-spacing: 4px;
-            text-transform: uppercase;
-            margin-bottom: 8px;
-        }
-
-        .section-title {
-            color: #e0e0e0;
-            font-size: 1.5rem;
-            margin-bottom: 40px;
-        }
-
-        .section-title .highlight {
-            color: var(--green);
-        }
-
-        /* TERMINAL BLOCK */
-        .terminal {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            overflow: hidden;
-            margin: 24px 0;
-        }
-
-        .terminal-bar {
-            background: #161b22;
-            padding: 10px 16px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .terminal-dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-        }
-
-        .terminal-dot.red {
-            background: #ff5f57;
-        }
-
-        .terminal-dot.yellow {
-            background: #febc2e;
-        }
-
-        .terminal-dot.green {
-            background: #28c840;
-        }
-
-        .terminal-title {
-            color: #666;
-            font-size: 0.7rem;
-            margin-left: 8px;
-        }
-
-        .terminal-body {
-            padding: 20px;
-            font-size: 0.8rem;
-            line-height: 1.8;
-            overflow-x: auto;
-            height: 400px;
-            overflow-y: auto;
-        }
-
-        .terminal-body .prompt {
-            color: var(--green);
-        }
-
-        .terminal-body .command {
-            color: #e0e0e0;
-        }
-
-        .terminal-body .output {
-            color: #666;
-        }
-
-        .terminal-body .success {
-            color: var(--green);
-        }
-
-        .terminal-body .warning {
-            color: var(--yellow);
-        }
-
-        .terminal-body .error {
-            color: var(--red);
-        }
-
-        /* FLOW */
-        .flow {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-wrap: wrap;
-            gap: 0;
-            margin: 40px 0;
-        }
-
-        .flow-step {
-            text-align: center;
-            padding: 16px 20px;
-        }
-
-        .flow-icon {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 56px;
-            height: 56px;
-            margin: 0 auto 12px;
-            border: 1px solid var(--green-dark);
-            border-radius: 12px;
-            background: var(--bg-card);
-            color: var(--green);
-            transition: all 0.3s ease;
-        }
-
-        .flow-step:hover .flow-icon {
-            border-color: var(--green);
-            box-shadow: 0 0 20px rgba(0, 255, 65, 0.15);
-        }
-
-        .flow-icon svg {
-            width: 24px;
-            height: 24px;
-            stroke: var(--green);
-            stroke-width: 1.5;
-        }
-
-        .flow-label {
-            color: var(--green);
-            font-size: 0.7rem;
-            font-weight: 700;
-            letter-spacing: 0.5px;
-        }
-
-        .flow-arrow {
-            color: var(--green-dark);
-            display: flex;
-            align-items: center;
-            font-size: 1.5rem;
-            padding: 0 4px;
-        }
-
-        /* FEATURES GRID — horizontal cards */
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 16px;
-        }
-
-        .feature-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 18px 20px;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: flex-start;
-            gap: 14px;
-        }
-
-        .feature-card:hover {
-            border-color: var(--green-dark);
-            box-shadow: 0 0 30px rgba(0, 255, 65, 0.05);
-        }
-
-        .feature-card .icon {
-            color: var(--green);
-            flex-shrink: 0;
-            margin-top: 2px;
-        }
-
-        .feature-card .icon svg {
-            width: 24px;
-            height: 24px;
-            stroke: var(--green);
-            stroke-width: 1.5;
-        }
-
-        .feature-card .feature-text h3 {
-            color: #e0e0e0;
-            font-size: 0.8rem;
-            margin-bottom: 4px;
-        }
-
-        .feature-card .feature-text p {
-            font-size: 0.7rem;
-            color: #888;
-            line-height: 1.4;
-        }
-
-        /* MODES */
-        .modes {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
-
-        /* modes responsive handled in main responsive block below */
-
-        .mode-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 32px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .mode-card.default::before {
-            content: 'DEFAULT';
-            position: absolute;
-            top: 12px;
-            right: -28px;
-            background: var(--green);
-            color: var(--bg);
-            font-size: 0.6rem;
-            font-weight: 700;
-            padding: 4px 32px;
-            transform: rotate(45deg);
-        }
-
-        .mode-card h3 {
-            font-size: 1.1rem;
-            margin-bottom: 4px;
-        }
-
-        .mode-card.default h3 {
-            color: var(--green);
-        }
-
-        .mode-card.full h3 {
-            color: var(--red);
-        }
-
-        .mode-card .speed {
-            color: var(--cyan);
-            font-size: 0.75rem;
-            margin-bottom: 16px;
-        }
-
-        .mode-card ul {
-            list-style: none;
-            font-size: 0.75rem;
-        }
-
-        .mode-card ul li {
-            padding: 4px 0;
-            color: #888;
-        }
-
-        .mode-card ul li::before {
-            content: '>';
-            color: var(--green-dark);
-            margin-right: 8px;
-        }
-
-        /* COMPARISON TABLE */
-        .comparison-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.75rem;
-            margin: 24px 0;
-        }
-
-        .comparison-table th {
-            color: var(--green);
-            text-align: left;
-            padding: 12px;
-            border-bottom: 2px solid var(--green-dark);
-            font-weight: 700;
-        }
-
-        .comparison-table td {
-            padding: 10px 12px;
-            border-bottom: 1px solid #1a1a1a;
-        }
-
-        .comparison-table tr:hover td {
-            background: rgba(0, 255, 65, 0.02);
-        }
-
-        .check {
-            color: var(--green);
-        }
-
-        .cross {
-            color: #444;
-        }
-
-        /* JSON BLOCK */
-        .json-block {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 24px;
-            font-size: 0.75rem;
-            overflow-x: auto;
-        }
-
-        .json-key {
-            color: var(--cyan);
-        }
-
-        .json-string {
-            color: var(--green);
-        }
-
-        .json-number {
-            color: var(--yellow);
-        }
-
-        /* INSTALL TABS */
-        .install-tabs {
-            display: flex;
-            gap: 0;
-            margin-bottom: 0;
-        }
-
-        .install-tab {
-            padding: 10px 20px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.75rem;
-            background: transparent;
-            color: #666;
-            border: 1px solid var(--border);
-            border-bottom: none;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .install-tab:first-child {
-            border-radius: 8px 0 0 0;
-        }
-
-        .install-tab:last-child {
-            border-radius: 0 8px 0 0;
-        }
-
-        .install-tab.active {
-            color: var(--green);
-            background: var(--bg-card);
-            border-color: var(--green-dark);
-        }
-
-        .install-content {
-            display: none;
-        }
-
-        .install-content.active {
-            display: block;
-        }
-
-        .install-panel {
-            border: 1px solid var(--border);
-            border-top: 1px solid var(--green-dark);
-            border-radius: 0 0 8px 8px;
-            background: var(--bg-card);
-            padding: 24px;
-            font-size: 0.8rem;
-        }
-
-        .install-panel code {
-            color: var(--green);
-        }
-
-        .install-panel .step {
-            margin-bottom: 12px;
-        }
-
-        .install-panel .step-num {
-            color: var(--green-dark);
-            margin-right: 4px;
-        }
-
-        /* HASH */
-        .hash-block {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 20px;
-            margin: 24px 0;
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            flex-wrap: wrap;
-        }
-
-        .hash-label {
-            color: var(--green-dark);
-            font-size: 0.7rem;
-            letter-spacing: 2px;
-        }
-
-        .hash-value {
-            color: var(--cyan);
-            font-size: 0.8rem;
-            word-break: break-all;
-        }
-
-        /* HERO BADGES */
-        .hero-badges {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            justify-content: center;
-            margin-bottom: 28px;
-        }
-
-        .badge {
-            font-size: 0.6rem;
-            color: var(--green);
-            border: 1px solid var(--green-dark);
-            padding: 4px 12px;
-            border-radius: 20px;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-        }
-
-        /* HERO LINKS (replaces footer) */
-        .hero-links {
-            margin-top: 28px;
-            font-size: 0.65rem;
-            color: #444;
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .hero-links a {
-            color: var(--green-dark);
-            text-decoration: none;
-        }
-
-        .hero-links a:hover {
-            color: var(--green);
-        }
-
-        .hero-links span {
-            color: #333;
-        }
-
-        /* WARNING — military style */
-        .warning-section {
-            background: repeating-linear-gradient(
-                -45deg,
-                transparent,
-                transparent 18px,
-                rgba(255, 0, 64, 0.03) 18px,
-                rgba(255, 0, 64, 0.03) 36px
-            );
-        }
-
-        .warning-banner {
-            border: 2px solid var(--red);
-            border-radius: 0;
-            padding: 0;
-            max-width: 700px;
-            margin: 0 auto;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .warning-header {
-            background: var(--red);
-            color: var(--bg);
-            padding: 10px 20px;
-            font-size: 0.7rem;
-            font-weight: 700;
-            letter-spacing: 4px;
-            text-transform: uppercase;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .warning-header svg {
-            width: 18px;
-            height: 18px;
-            stroke: var(--bg);
-            stroke-width: 2;
-        }
-
-        .warning-body {
-            padding: 28px 24px;
-            background: rgba(255, 0, 64, 0.03);
-        }
-
-        .warning-body .warn-headline {
-            color: var(--red);
-            font-size: 1rem;
-            font-weight: 700;
-            margin-bottom: 16px;
-            line-height: 1.3;
-        }
-
-        .warning-items {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-
-        .warning-items li {
-            font-size: 0.72rem;
-            color: #999;
-            padding: 6px 0;
-            padding-left: 20px;
-            position: relative;
-            line-height: 1.4;
-        }
-
-        .warning-items li::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 11px;
-            width: 8px;
-            height: 8px;
-            background: var(--red);
-            clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
-        }
-
-        .warning-items li strong {
-            color: var(--red);
-        }
-
-        .warning-footer {
-            border-top: 1px solid rgba(255, 0, 64, 0.15);
-            padding: 12px 24px;
-            font-size: 0.6rem;
-            color: #555;
-            letter-spacing: 1px;
-            text-align: center;
-            text-transform: uppercase;
-        }
-
-        /* ===== RESPONSIVE ===== */
-
-        @media (max-width: 768px) {
-            section {
-                padding: 24px 0;
-            }
-
-            .ascii-art {
-                font-size: clamp(0.22rem, 3.5vw, 0.55rem);
-            }
-
-            .hero-subtitle {
-                font-size: 0.7rem;
-            }
-
-            .cta-group {
-                flex-direction: column;
-                align-items: center;
-            }
-
-            .btn {
-                width: 100%;
-                max-width: 280px;
-                justify-content: center;
-            }
-
-            .scroll-indicator {
-                bottom: 12px;
-            }
-
-            .hero-badges {
-                gap: 6px;
-                margin-bottom: 20px;
-            }
-
-            .badge {
-                font-size: 0.5rem;
-                padding: 3px 8px;
-            }
-
-            .hero-links {
-                margin-top: 20px;
-                font-size: 0.55rem;
-            }
-
-            .section-title {
-                font-size: 1.2rem;
-                margin-bottom: 24px;
-            }
-
-            .section-header {
-                margin-bottom: 4px;
-            }
-
-            /* Flow — compact 3x2 grid, no arrows on mobile */
-            .flow {
-                display: grid;
-                grid-template-columns: repeat(3, 1fr);
-                gap: 12px;
-            }
-
-            .flow-arrow {
-                display: none;
-            }
-
-            .flow-step {
-                padding: 8px 4px;
-            }
-
-            .flow-icon {
-                width: 40px;
-                height: 40px;
-                border-radius: 8px;
-            }
-
-            .flow-icon svg {
-                width: 18px;
-                height: 18px;
-            }
-
-            .flow-label {
-                font-size: 0.6rem;
-            }
-
-            /* Terminal */
-            .terminal-body {
-                font-size: 0.55rem;
-                height: 280px;
-                padding: 12px;
-                line-height: 1.5;
-            }
-
-            /* Features — single col, compact horizontal */
-            .features-grid {
-                grid-template-columns: 1fr;
-                gap: 8px;
-            }
-
-            .feature-card {
-                padding: 12px 14px;
-                gap: 10px;
-            }
-
-            .feature-card .feature-text h3 {
-                font-size: 0.7rem;
-            }
-
-            .feature-card .feature-text p {
-                font-size: 0.6rem;
-            }
-
-            .feature-card .icon svg {
-                width: 20px;
-                height: 20px;
-            }
-
-            /* Modes */
-            .modes {
-                grid-template-columns: 1fr;
-                gap: 12px;
-            }
-
-            .mode-card {
-                padding: 20px;
-            }
-
-            .mode-card .speed {
-                font-size: 0.65rem;
-            }
-
-            .mode-card ul {
-                font-size: 0.65rem;
-            }
-
-            /* Comparison table scroll */
-            .comparison-table {
-                display: block;
-                overflow-x: auto;
-                white-space: nowrap;
-                font-size: 0.65rem;
-            }
-
-            /* Install tabs */
-            .install-tabs {
-                overflow-x: auto;
-            }
-
-            .install-tab {
-                font-size: 0.65rem;
-                padding: 8px 14px;
-            }
-
-            .install-panel {
-                font-size: 0.7rem;
-                padding: 16px;
-            }
-
-            /* JSON block */
-            .json-block {
-                font-size: 0.55rem;
-                padding: 14px;
-            }
-
-            .json-block pre {
-                font-size: 0.55rem;
-            }
-
-            /* Hash */
-            .hash-block {
-                padding: 14px;
-            }
-
-            .hash-value {
-                font-size: 0.6rem;
-            }
-
-            /* Warning */
-            .warning-body {
-                padding: 20px 16px;
-            }
-
-            .warn-headline {
-                font-size: 0.8rem !important;
-            }
-
-            .warning-items li {
-                font-size: 0.62rem;
-                padding: 4px 0 4px 16px;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .container {
-                padding: 0 12px;
-            }
-
-            .ascii-art {
-                font-size: clamp(0.18rem, 3vw, 0.4rem);
-                margin-bottom: 12px;
-            }
-
-            .hero-tagline {
-                font-size: 0.65rem;
-            }
-
-            .section-title {
-                font-size: 1rem;
-            }
-
-            .features-grid {
-                gap: 6px;
-            }
-
-            .feature-card {
-                padding: 10px 12px;
-            }
-
-            .terminal-body {
-                font-size: 0.5rem;
-                height: 250px;
-            }
-
-            .section-title {
-                font-size: 1rem;
-            }
-        }
-    </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FastBorn — Secure Disk Erasure Tool</title>
+<meta name="description" content="Zero-touch bootable USB disk erasure. Plug USB, boot, wait, done. Open-source DBAN alternative with Quick (1-pass) and Full (DoD 5220.22-M 7-pass) modes, verification, JSON reports and auto-reboot.">
+<meta name="theme-color" content="#020503">
+<meta property="og:type" content="website">
+<meta property="og:title" content="FastBorn — Secure Disk Erasure Tool">
+<meta property="og:description" content="Plug USB. Boot. Wait. Done. Open-source, zero-touch disk erasure for BIOS + UEFI, HDD, SSD and NVMe.">
+<meta property="og:url" content="https://burakdursun.com/Fastborn/">
+<meta property="og:image" content="https://burakdursun.com/Fastborn/assets/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/png" href="assets/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Silkscreen:wght@400;700&family=VT323&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#020503; --bg-2:#050b07; --panel:#07110a; --panel-2:#0b1a10; --line:#123320; --line-2:#1c4a2c;
+  --green:#22ff5e; --green-2:#00d84a; --green-dim:rgba(34,255,94,.12); --green-glow:rgba(34,255,94,.45);
+  --red:#ff2b44; --red-2:#ff5a6a; --red-dim:rgba(255,43,68,.12); --red-glow:rgba(255,43,68,.45);
+  --amber:#ffd23f;
+  --text:#d3eadb; --muted:#78967f; --dim:#3f5a47;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace; --pixel:"Silkscreen",var(--mono); --crt:"VT323",var(--mono);
+  --wrap:1200px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--mono);line-height:1.6;overflow-x:hidden}
+a{color:inherit}
+::selection{background:var(--green);color:#021006}
+.wrap{max-width:var(--wrap);margin:0 auto;padding:0 24px}
+.g{color:var(--green)} .r{color:var(--red)}
+/* global scanlines + vignette */
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:200;
+  background:repeating-linear-gradient(0deg,rgba(0,0,0,.18) 0 1px,transparent 1px 3px);mix-blend-mode:multiply;opacity:.55}
+.pixel{font-family:var(--pixel)}
+
+/* ── nav ── */
+nav{position:fixed;top:0;left:0;right:0;z-index:60;transition:background .3s,border-color .3s;border-bottom:1px solid transparent}
+nav.scrolled{background:rgba(2,5,3,.8);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom-color:var(--line)}
+nav .wrap{display:flex;align-items:center;height:64px;gap:26px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;font-family:var(--pixel);font-size:18px;letter-spacing:.04em}
+.brand img{width:30px;height:30px;image-rendering:auto}
+.brand .b1{color:var(--green)} .brand .b2{color:var(--red)}
+nav ul{display:flex;gap:24px;list-style:none;margin:0 0 0 auto;padding:0}
+nav ul a{text-decoration:none;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);transition:color .2s}
+nav ul a:hover{color:var(--green)}
+.btn{display:inline-flex;align-items:center;gap:10px;font-family:var(--mono);font-weight:700;font-size:13px;letter-spacing:.1em;text-transform:uppercase;padding:13px 22px;border:1.5px solid var(--green);color:var(--green);background:rgba(34,255,94,.04);text-decoration:none;cursor:pointer;position:relative;transition:background .2s,color .2s,box-shadow .2s,transform .15s;clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px)}
+.btn:hover{background:var(--green);color:#021006;box-shadow:0 0 30px var(--green-glow);transform:translateY(-1px)}
+.btn.solid{background:var(--green);color:#021006;box-shadow:0 0 34px -6px var(--green-glow)}
+.btn.solid:hover{background:#7dff9f}
+.btn.red{border-color:var(--red);color:var(--red);background:rgba(255,43,68,.04)}
+.btn.red:hover{background:var(--red);color:#1a0206;box-shadow:0 0 30px var(--red-glow)}
+.btn.small{padding:8px 14px;font-size:11px}
+.btn small{font-weight:500;opacity:.7;letter-spacing:.04em;text-transform:none}
+
+/* ── hero ── */
+.hero{position:relative;min-height:100vh;padding:90px 0 40px;overflow:hidden;display:flex;flex-direction:column;justify-content:center}
+.hero::before{content:"";position:absolute;inset:0;background:
+  radial-gradient(60% 70% at 18% 62%,rgba(34,255,94,.13),transparent 65%),
+  radial-gradient(60% 70% at 82% 62%,rgba(255,43,68,.14),transparent 65%),
+  linear-gradient(90deg,rgba(34,255,94,.03),transparent 45%,transparent 55%,rgba(255,43,68,.03));pointer-events:none}
+.hero .grid-bg{position:absolute;inset:0;pointer-events:none;opacity:.35;
+  background-image:linear-gradient(rgba(34,255,94,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(34,255,94,.07) 1px,transparent 1px);background-size:44px 44px;
+  mask-image:radial-gradient(70% 60% at 50% 55%,#000,transparent)}
+#fx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1}
+.corner{position:absolute;top:84px;z-index:3;font-size:12px;letter-spacing:.14em;line-height:1.9;padding:14px 18px;text-transform:uppercase}
+.corner::before,.corner::after{content:"";position:absolute;width:26px;height:26px;border:1.5px solid currentColor}
+.corner.l{left:28px;color:var(--green)} .corner.l::before{left:0;top:0;border-right:0;border-bottom:0} .corner.l::after{left:0;bottom:0;border-right:0;border-top:0}
+.corner.rr{right:28px;color:var(--red);text-align:left} .corner.rr::before{right:0;top:0;border-left:0;border-bottom:0} .corner.rr::after{right:0;bottom:0;border-left:0;border-top:0}
+.corner b{display:block;margin-bottom:4px;font-weight:700}
+.corner span{display:block;opacity:.75}
+.corner span::before{content:"> "}
+.hero-center{position:relative;z-index:2;text-align:center}
+#wm{display:block;width:100%;height:auto;margin:0 auto;cursor:crosshair}
+.wm-wrap{position:relative;display:block;width:100%}
+.wm-fallback{display:block;max-width:880px;width:88%;margin:0 auto}
+.sub{font-weight:800;font-size:clamp(14px,2.2vw,26px);letter-spacing:.2em;margin:8px 0 6px;text-transform:uppercase}
+.sub .r{position:relative;display:inline-block}
+.sub .r.glitching{animation:rglitch .5s steps(3) 1}
+@keyframes rglitch{0%{transform:translate(0);text-shadow:none}33%{transform:translate(-3px,1px);text-shadow:3px 0 var(--green)}66%{transform:translate(3px,-1px);text-shadow:-3px 0 #fff}100%{transform:none}}
+.tagline{font-size:clamp(16px,2vw,24px);color:#e9f5ec;letter-spacing:.04em;min-height:1.6em}
+.tagline .cur{display:inline-block;width:.6em;height:1.05em;background:var(--green);vertical-align:-.12em;margin-left:3px;animation:blink 1s steps(1) infinite;box-shadow:0 0 10px var(--green)}
+@keyframes blink{50%{opacity:0}}
+.hero-cta{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin:26px 0 8px}
+.hero-meta{font-size:11.5px;color:var(--dim);letter-spacing:.12em;text-transform:uppercase}
+.hero-meta a{color:var(--muted);text-decoration:none}.hero-meta a:hover{color:var(--green)}
+
+/* drives row */
+.rig{position:relative;z-index:2;display:grid;grid-template-columns:repeat(3,1fr) 120px repeat(3,1fr);gap:14px;align-items:end;margin-top:34px;padding:0 24px;max-width:1320px;margin-left:auto;margin-right:auto;width:100%}
+.drive{position:relative;border:1.5px solid var(--line-2);background:linear-gradient(160deg,#0b1a10,#030805 70%);padding:14px 14px 12px;min-height:150px;
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.6),0 20px 40px -18px rgba(0,0,0,.9);
+  clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px))}
+.drive::before{content:"";position:absolute;inset:6px;border:1px solid rgba(255,255,255,.04);pointer-events:none}
+.drive .dl{font-family:var(--pixel);font-size:20px;line-height:1;color:#e8f5ec}
+.drive .ds{font-size:11px;margin:8px 0 8px;letter-spacing:.06em;white-space:nowrap;overflow:hidden}
+.drive .bar{display:grid;grid-template-columns:repeat(16,1fr);gap:2px;height:12px}
+.drive .bar i{background:rgba(255,255,255,.05)}
+.drive .dd{margin-top:10px;font-size:12px;font-weight:700;letter-spacing:.1em;display:flex;align-items:center;gap:8px;opacity:0;transform:translateY(4px);transition:all .3s}
+.drive .dd svg{width:18px;height:18px}
+.drive.ok{border-color:rgba(34,255,94,.55)}
+.drive.ok .ds,.drive.ok .dd{color:var(--green)}
+.drive.ok .bar i.on{background:var(--green);box-shadow:0 0 8px var(--green-glow)}
+.drive.ok.done .dd{opacity:1;transform:none}
+.drive.ok.done{box-shadow:0 0 30px -6px var(--green-glow),inset 0 0 20px rgba(34,255,94,.08)}
+.drive.bad{border-color:rgba(255,43,68,.55)}
+.drive.bad .ds,.drive.bad .dd{color:var(--red)}
+.drive.bad .bar i.on{background:var(--red);box-shadow:0 0 8px var(--red-glow)}
+.drive.bad.jit{animation:jit .18s steps(2) 1}
+@keyframes jit{0%{transform:translate(2px,-1px)}50%{transform:translate(-2px,1px)}100%{transform:none}}
+.drive.bad .dl{text-shadow:2px 0 rgba(255,43,68,.6),-2px 0 rgba(34,255,94,.25)}
+.usb{justify-self:center;width:92px;position:relative;filter:drop-shadow(-8px 0 18px rgba(34,255,94,.35)) drop-shadow(8px 0 18px rgba(255,43,68,.35));animation:float 4s ease-in-out infinite}
+.usb svg{width:100%;height:auto;display:block}
+@keyframes float{50%{transform:translateY(-8px)}}
+.usb .led{animation:led 1.4s ease-in-out infinite}
+@keyframes led{50%{opacity:.25}}
+
+/* strip */
+.strip{position:relative;z-index:3;display:flex;justify-content:center;gap:12px;flex-wrap:wrap;padding:34px 24px 10px}
+.strip span{display:inline-flex;align-items:center;gap:9px;border:1.5px solid rgba(34,255,94,.5);color:var(--green);font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;padding:10px 16px;border-radius:10px;background:rgba(34,255,94,.03)}
+.strip svg{width:17px;height:17px}
+.strip-label{text-align:center;font-size:13px;letter-spacing:.36em;color:#c2d6c8;margin-top:34px;display:flex;align-items:center;gap:18px;justify-content:center}
+.strip-label::before,.strip-label::after{content:"";height:1px;width:min(260px,18vw);background:linear-gradient(90deg,transparent,var(--line-2))}
+.strip-label::after{transform:scaleX(-1)}
+
+/* sections */
+section{position:relative;padding:120px 0}
+.eyebrow{font-size:12px;letter-spacing:.3em;text-transform:uppercase;color:var(--green);display:inline-flex;gap:10px;align-items:center}
+.eyebrow::before{content:"//";color:var(--dim)}
+.eyebrow.red{color:var(--red)}
+h2.title{font-family:var(--pixel);font-weight:700;font-size:clamp(30px,4.6vw,56px);line-height:1.05;margin:16px 0 18px;letter-spacing:.01em;color:#effaf2;text-transform:uppercase}
+.lead{color:var(--muted);font-size:15.5px;max-width:720px;margin:0 0 46px}
+.reveal{opacity:0;transform:translateY(26px);transition:opacity .9s cubic-bezier(.2,.7,.2,1),transform .9s cubic-bezier(.2,.7,.2,1)}
+.reveal.in{opacity:1;transform:none}
+.panel{border:1px solid var(--line);background:linear-gradient(180deg,var(--panel),var(--bg-2));position:relative}
+.panel-head{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line);font-size:11px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase}
+.panel-head .dots{display:flex;gap:6px}.panel-head .dots i{width:9px;height:9px;border-radius:50%;background:var(--line-2)}
+.panel-head .dots i:nth-child(1){background:var(--red)}.panel-head .dots i:nth-child(2){background:var(--amber)}.panel-head .dots i:nth-child(3){background:var(--green)}
+.panel-head .rt{margin-left:auto}
+.brk{position:relative}
+.brk::before,.brk::after{content:"";position:absolute;width:18px;height:18px;border:1.5px solid var(--green);pointer-events:none;z-index:2}
+.brk::before{top:-1px;left:-1px;border-right:0;border-bottom:0}
+.brk::after{bottom:-1px;right:-1px;border-left:0;border-top:0}
+
+/* ── wipe lab ── */
+.lab{display:grid;grid-template-columns:320px 1fr;gap:18px}
+.lab>*{min-width:0}
+.ctl{padding:18px}
+.ctl h4{font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);margin:0 0 8px;font-weight:500}
+.opts{display:grid;gap:8px;margin-bottom:20px}
+.opt{display:flex;align-items:center;gap:12px;border:1px solid var(--line);background:#040a06;padding:10px 12px;cursor:pointer;text-align:left;color:var(--text);font-family:var(--mono);font-size:13px;transition:border-color .2s,background .2s}
+.opt:hover{border-color:var(--line-2)}
+.opt .k{font-family:var(--pixel);font-size:14px;min-width:52px}
+.opt small{display:block;color:var(--muted);font-size:11px}
+.opt.on{border-color:var(--green);background:var(--green-dim)}
+.opt.on .k{color:var(--green)}
+.opt.full.on{border-color:var(--red);background:var(--red-dim)}
+.opt.full.on .k{color:var(--red)}
+.est{border-top:1px dashed var(--line);padding-top:14px;margin-top:6px;font-size:12px;color:var(--muted)}
+.est b{display:block;font-family:var(--crt);font-size:34px;line-height:1;color:var(--text);font-weight:400;margin:4px 0}
+.est em{font-style:normal;color:var(--dim);font-size:10.5px}
+#wipeBtn{width:100%;justify-content:center;margin-top:16px}
+#wipeBtn[disabled]{opacity:.5;pointer-events:none}
+.screen{display:grid;grid-template-rows:auto 1fr auto;min-height:100%}
+.hud{display:flex;flex-wrap:wrap;gap:8px 22px;padding:12px 16px;border-bottom:1px solid var(--line);font-size:12px;color:var(--muted);align-items:center}
+.hud b{color:var(--text);font-weight:700}
+.hud .phase{font-family:var(--pixel);font-size:14px;color:var(--green);letter-spacing:.04em;min-width:220px}
+.hud .phase.red{color:var(--red)}
+.hud .prog{flex:1;min-width:160px;height:8px;background:#040a06;border:1px solid var(--line);position:relative;overflow:hidden}
+.hud .prog i{position:absolute;inset:0 auto 0 0;width:0;background:linear-gradient(90deg,var(--green-2),var(--green));box-shadow:0 0 12px var(--green-glow)}
+.canvas-wrap{position:relative;padding:14px 16px}
+#sectors{display:block;max-width:100%;height:auto;image-rendering:pixelated}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:10.5px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;padding:0 16px 12px}
+.legend i{display:inline-block;width:10px;height:10px;margin-right:6px;vertical-align:-1px}
+.lower{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--line)}
+.hex{font-family:var(--crt);font-size:clamp(13px,1.25vw,17px);line-height:1.15;padding:12px 16px;color:var(--muted);border-right:1px solid var(--line);white-space:pre;overflow:hidden;min-height:140px}
+.hex .a{color:var(--dim)} .hex .w{color:var(--green)} .hex .x{color:var(--red)}
+.report{font-family:var(--mono);font-size:11.5px;line-height:1.55;padding:12px 16px;margin:0;color:var(--muted);white-space:pre;overflow:auto;max-height:230px;min-height:140px}
+.report .k{color:#7fd3ff} .report .s{color:var(--green)} .report .n{color:var(--amber)}
+.report .ph{color:var(--dim)}
+.done-overlay{position:absolute;inset:14px 16px;display:grid;place-items:center;pointer-events:none;opacity:0;transition:opacity .4s}
+.done-overlay.on{opacity:1}
+.done-overlay div{font-family:var(--pixel);font-size:clamp(28px,5vw,64px);color:var(--green);text-shadow:0 0 30px var(--green-glow);background:rgba(2,5,3,.72);padding:10px 26px;border:2px solid var(--green);text-align:center;line-height:1.1}
+.done-overlay small{display:block;font-family:var(--mono);font-size:12px;letter-spacing:.2em;color:var(--text);margin-top:8px}
+
+/* ── flow + terminal ── */
+.flow{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:30px}
+.step{border:1px solid var(--line);background:var(--panel);padding:16px 12px;text-align:center;position:relative;transition:border-color .3s,box-shadow .3s,transform .3s}
+.step svg{width:28px;height:28px;color:var(--muted);transition:color .3s}
+.step b{display:block;font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;margin-top:8px}
+.step small{display:block;font-size:10px;color:var(--dim);margin-top:2px}
+.step .n{position:absolute;top:6px;left:8px;font-size:10px;color:var(--dim)}
+.step.on{border-color:var(--green);box-shadow:0 0 26px -8px var(--green-glow);transform:translateY(-3px)}
+.step.on svg{color:var(--green)}
+.step.on.last{border-color:var(--red);box-shadow:0 0 26px -8px var(--red-glow)}
+.step.on.last svg{color:var(--red)}
+.crt{background:#010301;border:1px solid var(--line-2);position:relative;overflow:hidden;box-shadow:inset 0 0 80px rgba(34,255,94,.06),0 30px 80px -30px rgba(0,0,0,.9)}
+.crt::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(120% 90% at 50% 50%,transparent 60%,rgba(0,0,0,.55));}
+.crt-body{height:460px;overflow:hidden;padding:16px 20px;font-family:var(--crt);font-size:20px;line-height:1.18;color:#9fdcae;text-shadow:0 0 6px rgba(34,255,94,.35)}
+.crt-body div{white-space:pre-wrap;word-break:break-word}
+.crt-body pre{margin:0;font-family:var(--mono);font-size:clamp(5px,1.1vw,11px);line-height:1.1}
+.crt-body .output{color:#7aa384}.crt-body .command{color:#d8f5df}.crt-body .success{color:var(--green)}
+.crt-body .warning{color:var(--amber);text-shadow:0 0 6px rgba(255,210,63,.3)}.crt-body .error{color:var(--red);text-shadow:0 0 6px var(--red-glow)}
+.crt-body .prompt{color:#7fd3ff;text-shadow:0 0 6px rgba(127,211,255,.3)}
+.crt.flicker{animation:flick .25s steps(2) 3}
+@keyframes flick{50%{filter:brightness(1.8) hue-rotate(-90deg)}}
+
+/* modes */
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.mode{padding:28px;border:1.5px solid var(--line);background:var(--panel);position:relative;overflow:hidden}
+.mode h3{font-family:var(--pixel);font-size:26px;margin:0;letter-spacing:.02em}
+.mode .tm{font-size:13px;color:var(--muted);margin:4px 0 18px}
+.mode.q{border-color:rgba(34,255,94,.45)} .mode.q h3{color:var(--green)}
+.mode.f{border-color:rgba(255,43,68,.45)} .mode.f h3{color:var(--red)}
+.mode .tag{position:absolute;top:18px;right:18px;font-size:10px;letter-spacing:.2em;padding:4px 8px;border:1px solid currentColor}
+.mode.q .tag{color:var(--green)} .mode.f .tag{color:var(--red)}
+.passes{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 18px}
+.passes span{font-family:var(--crt);font-size:20px;padding:2px 10px;border:1px solid var(--line-2);color:var(--muted);transition:all .25s}
+.mode.q .passes span.on{border-color:var(--green);color:#021006;background:var(--green);box-shadow:0 0 16px var(--green-glow)}
+.mode.f .passes span.on{border-color:var(--red);color:#fff;background:var(--red);box-shadow:0 0 16px var(--red-glow)}
+.mode ul{list-style:none;padding:0;margin:0;font-size:13.5px;color:var(--text)}
+.mode li{padding:7px 0;border-bottom:1px dashed var(--line)}
+.mode li::before{content:"> ";color:var(--dim)}
+.mode .kbd{font-size:11.5px;color:var(--muted);margin-top:16px}
+.mode .kbd code{color:var(--text);border:1px solid var(--line-2);padding:1px 6px}
+
+/* comparison */
+.cmp{width:100%;border-collapse:collapse;font-size:13.5px}
+.cmp th,.cmp td{padding:13px 16px;text-align:left;border-bottom:1px solid var(--line)}
+.cmp th{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);font-weight:500}
+.cmp th.me{color:var(--green)}
+.cmp td.me{background:rgba(34,255,94,.045);color:var(--green);font-weight:700}
+.cmp tbody tr{opacity:0;transform:translateX(-10px);transition:opacity .45s,transform .45s}
+.cmp.in tbody tr{opacity:1;transform:none}
+.cmp .no{color:var(--red)} .cmp .mid{color:var(--amber)}
+.cmp tr:hover td{background:rgba(34,255,94,.03)}
+.cmp-wrap{overflow-x:auto}
+
+/* install */
+.install{display:grid;grid-template-columns:1.2fr .8fr;gap:18px;align-items:start}
+.tabs{display:flex;border-bottom:1px solid var(--line)}
+.tabs button{background:none;border:0;border-bottom:2px solid transparent;color:var(--muted);font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;padding:12px 18px;cursor:pointer}
+.tabs button.on{color:var(--green);border-bottom-color:var(--green)}
+.tabp{padding:18px 20px;font-size:13.5px}
+.tabp[hidden]{display:none}
+.line{display:flex;gap:12px;align-items:flex-start;padding:8px 0;border-bottom:1px dashed var(--line)}
+.line .n{color:var(--green);min-width:22px}
+.line code{color:#e9f5ec;background:#040a06;border:1px solid var(--line);padding:2px 8px;word-break:break-all}
+.line .c{color:var(--dim)}
+.line a{color:var(--green)}
+.cp{margin-left:auto;background:none;border:1px solid var(--line-2);color:var(--muted);font-family:var(--mono);font-size:10px;letter-spacing:.1em;padding:3px 8px;cursor:pointer;text-transform:uppercase;flex:none}
+.cp:hover{color:var(--green);border-color:var(--green)}
+.cp.done{color:var(--green);border-color:var(--green)}
+.dl-card{padding:22px}
+.dl-card .ver{font-family:var(--pixel);font-size:32px;color:var(--green);line-height:1}
+.dl-card .meta{font-size:12px;color:var(--muted);margin:8px 0 18px}
+.dl-card .btn{width:100%;justify-content:center}
+.hash{margin-top:18px;font-size:11px;color:var(--dim);letter-spacing:.12em;text-transform:uppercase}
+.hash code{display:block;margin-top:6px;font-size:11.5px;letter-spacing:0;text-transform:none;color:var(--text);word-break:break-all;background:#040a06;border:1px solid var(--line);padding:8px 10px}
+.hash .row{display:flex;align-items:center;gap:8px}
+
+/* v2 */
+.v2-note{display:flex;gap:14px;align-items:flex-start;border:1px solid rgba(255,210,63,.35);background:rgba(255,210,63,.04);padding:14px 18px;font-size:13px;color:#e8dcae;margin-bottom:30px}
+.v2-note svg{width:22px;height:22px;flex:none;color:var(--amber);margin-top:1px}
+.track{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;position:relative}
+.track::before{content:"";position:absolute;left:0;right:0;top:22px;height:2px;background:linear-gradient(90deg,var(--green),var(--green) 80%,var(--line-2));opacity:.45}
+.ms{position:relative;padding-top:48px}
+.ms .dot{position:absolute;top:13px;left:0;width:20px;height:20px;border:2px solid var(--green);background:var(--bg);box-shadow:0 0 14px var(--green-glow)}
+.ms .dot::after{content:"";position:absolute;inset:4px;background:var(--green)}
+.ms h4{font-family:var(--pixel);font-size:18px;color:var(--green);margin:0 0 8px}
+.ms ul{list-style:none;padding:0;margin:0;font-size:12.5px;color:var(--muted)}
+.ms li{padding:4px 0}
+.ms li::before{content:"+ ";color:var(--green)}
+.next{margin-top:34px;display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.next div{border:1px dashed var(--line-2);padding:14px;font-size:12.5px;color:var(--muted)}
+.next b{display:block;color:var(--text);font-size:11px;letter-spacing:.16em;text-transform:uppercase;margin-bottom:6px}
+.next div::before{content:"○ NEXT";display:block;font-size:10px;letter-spacing:.2em;color:var(--dim);margin-bottom:6px}
+
+/* warning */
+.warn{border:2px solid var(--red);background:linear-gradient(180deg,rgba(255,43,68,.08),rgba(255,43,68,.02));position:relative;overflow:hidden}
+.hazard{height:14px;background:repeating-linear-gradient(-45deg,var(--red) 0 14px,#1a0206 14px 28px);animation:haz 1.2s linear infinite;background-size:40px 14px}
+@keyframes haz{to{background-position:40px 0}}
+.warn-body{padding:30px 34px}
+.warn h3{font-family:var(--pixel);font-size:clamp(22px,3.4vw,40px);color:var(--red);margin:0 0 6px;line-height:1.1;text-shadow:0 0 20px var(--red-glow)}
+.warn h3.gl{animation:rglitch .5s steps(3) 1}
+.warn .sub2{color:#ffb3bc;margin:0 0 18px;font-size:14px}
+.warn ul{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:1fr 1fr;gap:10px 30px;font-size:13.5px}
+.warn li{padding-left:20px;position:relative;color:#f3d5d9}
+.warn li::before{content:"!";position:absolute;left:0;color:var(--red);font-weight:800}
+.warn li b{color:#fff}
+
+/* build + footer */
+.build{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+.term{font-family:var(--mono);font-size:13px;line-height:1.8;padding:16px 18px;min-height:220px}
+.term .p{color:var(--green)} .term .o{color:var(--muted)} .term .s{color:var(--green);font-weight:700}
+.final{text-align:center;padding:130px 0 80px;position:relative;overflow:hidden}
+.final h2{font-family:var(--pixel);font-size:clamp(34px,6.4vw,84px);line-height:1;margin:0 0 20px;text-transform:uppercase}
+.final p{color:var(--muted);margin:0 0 34px}
+.final .hero-cta{margin-bottom:0}
+footer{border-top:1px solid var(--line);padding:26px 0;font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+footer .wrap{display:flex;gap:18px;flex-wrap:wrap;align-items:center}
+footer a{color:var(--muted);text-decoration:none}footer a:hover{color:var(--green)}
+footer .rt{margin-left:auto;display:flex;gap:18px;flex-wrap:wrap}
+.cursor-blink::after{content:"_";animation:blink 1s steps(1) infinite}
+
+/* responsive */
+@media (max-width:1100px){
+  .rig{grid-template-columns:repeat(3,1fr) 90px repeat(3,1fr);gap:8px}
+  .drive{padding:10px;min-height:128px}.drive .dl{font-size:15px}.drive .ds{font-size:9.5px}
+  .corner{display:none}
+  .lab{grid-template-columns:1fr}
+  .track{grid-template-columns:repeat(3,1fr);row-gap:26px}
+  .next{grid-template-columns:1fr 1fr}
+}
+@media (max-width:820px){
+  nav ul{display:none} nav .btn{margin-left:auto}
+  .rig{grid-template-columns:repeat(3,1fr);gap:8px}
+  .rig .usb,.rig .drive.bad{display:none}
+  .flow{grid-template-columns:repeat(3,1fr)}
+  .modes,.install,.build,.lower{grid-template-columns:1fr}
+  .hex{border-right:0;border-bottom:1px solid var(--line)}
+  .warn ul{grid-template-columns:1fr}
+  .track{grid-template-columns:1fr 1fr}
+  .track::before{display:none}
+}
+@media (max-width:560px){
+  .wrap{padding:0 16px}
+  section{padding:84px 0}
+  .rig{padding:0 16px}
+  .drive .bar{height:9px}
+  .drive .dd{font-size:10px}
+  .flow{grid-template-columns:1fr 1fr}
+  .track,.next{grid-template-columns:1fr}
+  .warn-body{padding:22px 18px}
+  .crt-body{height:380px;font-size:16px;padding:12px}
+  .hud .phase{min-width:0}
+  footer .rt{margin-left:0}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+  html{scroll-behavior:auto}
+}
+</style>
 </head>
-
 <body>
-<div id="pageable">
 
-    <!-- HERO -->
-    <section class="hero" data-anchor="home">
-        <div class="horror-flash" id="horror-flash"></div>
-        <pre class="ascii-art">
- ███████╗ █████╗ ███████╗████████╗██████╗  ██████╗ ██████╗ ███╗   ██╗
- ██╔════╝██╔══██╗██╔════╝╚══██╔══╝██╔══██╗██╔═══██╗██╔══██╗████╗  ██║
- █████╗  ███████║███████╗   ██║   ██████╔╝██║   ██║██████╔╝██╔██╗ ██║
- ██╔══╝  ██╔══██║╚════██║   ██║   ██╔══██╗██║   ██║██╔══██╗██║╚██╗██║
- ██║     ██║  ██║███████║   ██║   ██████╔╝╚██████╔╝██║  ██║██║ ╚████║
- ╚═╝     ╚═╝  ╚═╝╚══════╝   ╚═╝   ╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═══╝
-    </pre>
-        <div class="hero-subtitle">SECURE DISK ERASURE TOOL</div>
-        <div class="hero-tagline">$ Plug USB. Boot. Wait. Done.<span class="cursor">_</span></div>
+<nav id="nav">
+  <div class="wrap">
+    <a class="brand" href="#top"><img src="assets/icon.png" alt=""><span><span class="b1">FASTB</span><span class="b2">ORN</span></span></a>
+    <ul>
+      <li><a href="#lab">Wipe lab</a></li>
+      <li><a href="#how">How it works</a></li>
+      <li><a href="#modes">Modes</a></li>
+      <li><a href="#install">Install</a></li>
+      <li><a href="#v2">V2</a></li>
+    </ul>
+    <a class="btn small" href="https://github.com/badursun/Fastborn" target="_blank" rel="noopener">GitHub</a>
+  </div>
+</nav>
 
-        <div class="hero-badges">
-            <span class="badge">Open Source</span>
-            <span class="badge">MIT License</span>
-            <span class="badge">BIOS + UEFI</span>
-            <span class="badge">NVMe Ready</span>
+<!-- ───────── HERO ───────── -->
+<header class="hero" id="top">
+  <div class="grid-bg"></div>
+  <canvas id="fx" aria-hidden="true"></canvas>
+
+  <div class="corner l"><b>[ Secure erase ]</b><span>Open source</span><span>Privacy first</span><span>Clean exits</span><span>No traces left</span></div>
+  <div class="corner rr"><b>[ Destruction engine ]</b><span>DoD 5220.22-M 7-pass</span><span>Multi-pass wipe</span><span>Verify &amp; report</span><span>Auto-reboot</span></div>
+
+  <div class="hero-center">
+    <h1 style="margin:0">
+      <span class="wm-wrap"><canvas id="wm" aria-label="FastBorn"></canvas></span>
+      <span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">FastBorn</span>
+    </h1>
+    <div class="sub"><span class="g">Secure disk </span><span class="r" id="subRed">erasure tool</span></div>
+    <div class="tagline"><span id="typed"></span><span class="cur"></span></div>
+    <div class="hero-cta">
+      <a class="btn solid" href="https://github.com/badursun/Fastborn/releases/latest/download/fastborn.iso">↓ Download ISO <small>v1.0 · ~20 MB</small></a>
+      <a class="btn red" href="#lab">▶ Watch it wipe</a>
+    </div>
+    <div class="hero-meta">MIT · BIOS + UEFI · HDD · SSD · NVMe · <a href="https://github.com/badursun/Fastborn/releases" target="_blank" rel="noopener">releases</a> · built by <a href="https://github.com/badursun" target="_blank" rel="noopener">@badursun</a></div>
+  </div>
+
+  <div class="rig" id="rig" aria-hidden="true">
+    <div class="drive ok" data-label="HDD"></div>
+    <div class="drive ok" data-label="SSD"></div>
+    <div class="drive ok" data-label="NVMe"></div>
+    <div class="usb" id="usb">
+      <svg viewBox="0 0 92 250">
+        <defs>
+          <linearGradient id="edge" x1="0" x2="1"><stop offset="0" stop-color="#22ff5e"/><stop offset=".5" stop-color="#22ff5e"/><stop offset=".5" stop-color="#ff2b44"/><stop offset="1" stop-color="#ff2b44"/></linearGradient>
+          <linearGradient id="metal" x1="0" x2="1"><stop offset="0" stop-color="#6b7570"/><stop offset=".5" stop-color="#d7dfdb"/><stop offset="1" stop-color="#5d6863"/></linearGradient>
+          <linearGradient id="body" x1="0" x2="1"><stop offset="0" stop-color="#0c1a11"/><stop offset=".5" stop-color="#050a07"/><stop offset="1" stop-color="#1a0b0d"/></linearGradient>
+        </defs>
+        <rect x="24" y="2" width="44" height="52" rx="3" fill="url(#metal)"/>
+        <rect x="33" y="14" width="9" height="9" fill="#1d2320"/><rect x="50" y="14" width="9" height="9" fill="#1d2320"/>
+        <rect x="8" y="50" width="76" height="196" rx="12" fill="url(#body)" stroke="url(#edge)" stroke-width="3"/>
+        <rect x="16" y="60" width="60" height="176" rx="8" fill="none" stroke="#ffffff" stroke-opacity=".06"/>
+        <text x="46" y="148" text-anchor="middle" transform="rotate(-90 46 148)" font-family="Silkscreen,monospace" font-weight="700" font-size="21" letter-spacing="1">
+          <tspan fill="#22ff5e">FASTB</tspan><tspan fill="#ff2b44">ORN</tspan>
+        </text>
+        <rect class="led" x="36" y="222" width="20" height="5" rx="2" fill="#22ff5e"/>
+      </svg>
+    </div>
+    <div class="drive bad" data-label="HDD" data-verb="DESTROYING"></div>
+    <div class="drive bad" data-label="SSD" data-verb="OVERWRITE"></div>
+    <div class="drive bad" data-label="NVMe" data-verb="SHREDDING"></div>
+  </div>
+
+  <div class="strip-label">OPEN-SOURCE DBAN ALTERNATIVE</div>
+  <div class="strip">
+    <span><svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38v-1.33c-2.23.48-2.7-1.07-2.7-1.07-.36-.92-.89-1.17-.89-1.17-.73-.5.05-.49.05-.49.8.06 1.23.83 1.23.83.72 1.23 1.88.87 2.34.67.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 014 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48v2.2c0 .21.15.46.55.38A8 8 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>Open source</span>
+    <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="5" width="14" height="14" rx="1"/><rect x="9" y="9" width="6" height="6"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></svg>BIOS + UEFI</span>
+    <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 2 4.5 13.5H11L10 22l8.5-11.5H12z"/></svg>NVMe ready</span>
+    <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 4 6v6c0 4.5 3.4 8.3 8 9 4.6-.7 8-4.5 8-9V6z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg>Verification</span>
+    <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v4h-4"/></svg>Auto-reboot</span>
+  </div>
+</header>
+
+<!-- ───────── WIPE LAB ───────── -->
+<section id="lab">
+  <div class="wrap">
+    <span class="eyebrow reveal">Wipe lab · interactive simulation</span>
+    <h2 class="title reveal">Watch every sector <span class="g">go dark.</span></h2>
+    <p class="lead reveal">Pick a drive and a mode, then hit wipe. This is a visual simulation of what FastBorn v1.0 does on real hardware: overwrite every sector, read back 100 random sectors, and write a JSON report to the USB stick.</p>
+
+    <div class="lab">
+      <div class="panel brk ctl reveal">
+        <h4>Target drive</h4>
+        <div class="opts" id="drives">
+          <button class="opt on" data-d="0"><span class="k">HDD</span><span>WDC WD5000AAKX<small>465 GB · ~98 MB/s</small></span></button>
+          <button class="opt" data-d="1"><span class="k">SSD</span><span>Samsung 860 EVO<small>232 GB · ~420 MB/s</small></span></button>
+          <button class="opt" data-d="2"><span class="k">NVMe</span><span>Samsung 970 EVO<small>238 GB · ~1.4 GB/s</small></span></button>
         </div>
-
-        <div class="cta-group">
-            <a href="https://github.com/badursun/Fastborn/releases/latest/download/fastborn.iso"
-                class="btn btn-primary">
-                &darr; DOWNLOAD ISO (~20MB)
-            </a>
-            <a href="https://github.com/badursun/Fastborn" class="btn btn-secondary" target="_blank" rel="noopener">
-                &lt;/&gt; GITHUB
-            </a>
+        <h4>Erase mode</h4>
+        <div class="opts" id="modesSel">
+          <button class="opt on" data-m="quick"><span class="k">QUICK</span><span>1-pass zero fill<small>default · auto-starts after 3s</small></span></button>
+          <button class="opt full" data-m="full"><span class="k">FULL</span><span>DoD 5220.22-M, 7 passes<small>manual choice in GRUB</small></span></button>
         </div>
-
-        <div class="hero-links">
-            <a href="https://github.com/badursun/Fastborn" target="_blank" rel="noopener">GitHub</a>
-            <span>&middot;</span>
-            <a href="https://github.com/badursun/Fastborn/releases" target="_blank" rel="noopener">Releases</a>
-            <span>&middot;</span>
-            <a href="https://github.com/badursun/Fastborn/issues" target="_blank" rel="noopener">Issues</a>
-            <span>&middot;</span>
-            <span>Built by <a href="https://github.com/badursun" target="_blank" rel="noopener">@badursun</a></span>
+        <div class="est">Estimated real-world time
+          <b id="estTime">–</b>
+          <em>rough estimate from drive size ÷ sustained write speed × passes</em>
         </div>
+        <button class="btn solid" id="wipeBtn">▶ Boot &amp; wipe</button>
+      </div>
 
-        <div class="scroll-indicator">&darr; SCROLL &darr;</div>
-    </section>
-
-    <!-- HOW IT WORKS -->
-    <section id="section-workflow">
-        <div class="container">
-            <div class="section-header">// WORKFLOW</div>
-            <div class="section-title">How It <span class="highlight">Works</span></div>
-
-            <div class="flow">
-                <div class="flow-step">
-                    <div class="flow-icon"><i data-lucide="usb"></i></div>
-                    <div class="flow-label">Flash USB</div>
-                </div>
-                <div class="flow-arrow"><i data-lucide="chevron-right"></i></div>
-                <div class="flow-step">
-                    <div class="flow-icon"><i data-lucide="plug"></i></div>
-                    <div class="flow-label">Plug In</div>
-                </div>
-                <div class="flow-arrow"><i data-lucide="chevron-right"></i></div>
-                <div class="flow-step">
-                    <div class="flow-icon"><i data-lucide="power"></i></div>
-                    <div class="flow-label">Boot & Wait</div>
-                </div>
-                <div class="flow-arrow"><i data-lucide="chevron-right"></i></div>
-                <div class="flow-step">
-                    <div class="flow-icon"><i data-lucide="hard-drive"></i></div>
-                    <div class="flow-label">Disks Wiped</div>
-                </div>
-                <div class="flow-arrow"><i data-lucide="chevron-right"></i></div>
-                <div class="flow-step">
-                    <div class="flow-icon"><i data-lucide="shield-check"></i></div>
-                    <div class="flow-label">Verified</div>
-                </div>
-                <div class="flow-arrow"><i data-lucide="chevron-right"></i></div>
-                <div class="flow-step">
-                    <div class="flow-icon"><i data-lucide="rotate-ccw"></i></div>
-                    <div class="flow-label">Auto Reboot</div>
-                </div>
-            </div>
-
-            <div class="terminal">
-                <div class="terminal-bar">
-                    <div class="terminal-dot red"></div>
-                    <div class="terminal-dot yellow"></div>
-                    <div class="terminal-dot green"></div>
-                    <div class="terminal-title">fastborn.sh — live boot simulation</div>
-                </div>
-                <div class="terminal-body" id="boot-terminal">
-                    <div id="boot-placeholder" style="color:#333;font-size:0.75rem">Scroll down to start boot sequence...</div>
-                </div>
-            </div>
+      <div class="panel reveal screen">
+        <div class="panel-head"><span class="dots"><i></i><i></i><i></i></span><span id="devName">/dev/sda</span><span class="rt" id="lbaInfo">sector map · 1 cell ≈ 0.1% of disk</span></div>
+        <div>
+          <div class="hud">
+            <span class="phase" id="phase">READY — DATA PRESENT</span>
+            <div class="prog"><i id="progBar"></i></div>
+            <span><b id="pct">0</b>%</span>
+            <span>verified <b id="verN">0</b>/100</span>
+          </div>
+          <div class="canvas-wrap">
+            <canvas id="sectors"></canvas>
+            <div class="done-overlay" id="doneOv"><div>ERASED<small id="doneSub">VERIFICATION PASSED</small></div></div>
+          </div>
+          <div class="legend">
+            <span><i style="background:#3b7ea1"></i>documents</span><span><i style="background:#9a6bd6"></i>photos</span><span><i style="background:#c9a23a"></i>system</span><span><i style="background:#1a2a20"></i>free</span><span><i style="background:#0e3d1c;box-shadow:inset 0 0 0 1px #22ff5e"></i>0x00</span><span><i style="background:#c8ffd6"></i>0xFF</span><span><i style="background:repeating-linear-gradient(90deg,#445 0 2px,#889 2px 4px)"></i>random</span>
+          </div>
         </div>
-    </section>
-
-    <!-- MODES -->
-    <section>
-        <div class="container">
-            <div class="section-header">// ERASE MODES</div>
-            <div class="section-title">Two <span class="highlight">Modes</span>, One Choice</div>
-
-            <div class="modes">
-                <div class="mode-card default">
-                    <h3>&gt; Quick Mode</h3>
-                    <div class="speed">~15-20 min / 80GB</div>
-                    <ul>
-                        <li>1-pass zero fill (0x00)</li>
-                        <li>All sectors including MBR</li>
-                        <li>Auto-starts after 3s GRUB timeout</li>
-                        <li>Ideal for internet cafes &amp; labs</li>
-                        <li>Sufficient for MBR malware removal</li>
-                    </ul>
-                </div>
-                <div class="mode-card full">
-                    <h3>&gt; Full Mode</h3>
-                    <div class="speed">~2+ hours / 80GB</div>
-                    <ul>
-                        <li>DoD 5220.22-M (7-pass)</li>
-                        <li>0x00 &rarr; 0xFF &rarr; Random &rarr; repeat</li>
-                        <li>Military-grade data destruction</li>
-                        <li>For sensitive data</li>
-                        <li>Manual selection in GRUB menu</li>
-                    </ul>
-                </div>
-            </div>
+        <div class="lower">
+          <div class="hex" id="hex"></div>
+          <pre class="report" id="report"><span class="ph">// /fastborn-logs/ report appears here after verification</span></pre>
         </div>
-    </section>
+      </div>
+    </div>
+  </div>
+</section>
 
-    <!-- FEATURES -->
-    <section>
-        <div class="container">
-            <div class="section-header">// FEATURES</div>
-            <div class="section-title">Why <span class="highlight">FastBorn?</span></div>
+<!-- ───────── HOW ───────── -->
+<section id="how" style="background:linear-gradient(180deg,transparent,rgba(34,255,94,.025),transparent)">
+  <div class="wrap">
+    <span class="eyebrow reveal">Workflow</span>
+    <h2 class="title reveal">Plug. Boot. Wait. <span class="g">Done.</span></h2>
+    <p class="lead reveal">Built for bulk PC cleanup in internet cafés, offices and school labs. No keyboard, no menus, no decisions at the machine: the default path runs itself.</p>
+    <div class="flow" id="flow">
+      <div class="step reveal"><span class="n">01</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="7" y="2" width="10" height="6"/><rect x="5" y="8" width="14" height="14" rx="2"/><path d="M10 4.5h1M13 4.5h1"/></svg><b>Flash USB</b><small>Rufus / dd</small></div>
+      <div class="step reveal"><span class="n">02</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 2v6M15 2v6M6 8h12v4a6 6 0 0 1-12 0zM12 18v4"/></svg><b>Plug in</b><small>any PC</small></div>
+      <div class="step reveal"><span class="n">03</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2v10M6.3 6.3a8 8 0 1 0 11.4 0"/></svg><b>Boot</b><small>GRUB · 3s</small></div>
+      <div class="step reveal"><span class="n">04</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 15h.01M11 15h6"/></svg><b>Wipe</b><small>all disks, parallel</small></div>
+      <div class="step reveal"><span class="n">05</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3 4 6v6c0 4.5 3.4 8.3 8 9 4.6-.7 8-4.5 8-9V6z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg><b>Verify</b><small>100 sectors · JSON log</small></div>
+      <div class="step reveal last"><span class="n">06</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v4h-4"/></svg><b>Reboot</b><small>pull USB, install OS</small></div>
+    </div>
+    <div class="crt reveal" id="crt">
+      <div class="panel-head"><span class="dots"><i></i><i></i><i></i></span>fastborn — live boot simulation<span class="rt" id="crtState">standby</span></div>
+      <div class="crt-body" id="bootTerm"></div>
+    </div>
+  </div>
+</section>
 
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="icon"><i data-lucide="mouse-pointer-click"></i></div>
-                    <div class="feature-text"><h3>Zero-Touch</h3>
-                    <p>Plug USB, power on, don't touch anything. Starts in 3 seconds.</p></div>
-                </div>
-                <div class="feature-card">
-                    <div class="icon"><i data-lucide="zap"></i></div>
-                    <div class="feature-text"><h3>Parallel Wipe</h3>
-                    <p>All disks (SATA, NVMe, HDD) wiped simultaneously.</p></div>
-                </div>
-                <div class="feature-card">
-                    <div class="icon"><i data-lucide="check-circle"></i></div>
-                    <div class="feature-text"><h3>Verification</h3>
-                    <p>Reads 100 random sectors post-wipe to confirm zeroed.</p></div>
-                </div>
-                <div class="feature-card">
-                    <div class="icon"><i data-lucide="file-json"></i></div>
-                    <div class="feature-text"><h3>JSON Log</h3>
-                    <p>Erasure report per disk. Enterprise-grade audit trail.</p></div>
-                </div>
-                <div class="feature-card">
-                    <div class="icon"><i data-lucide="archive"></i></div>
-                    <div class="feature-text"><h3>~20MB ISO</h3>
-                    <p>Runs from RAM. Never touches disks during boot.</p></div>
-                </div>
-                <div class="feature-card">
-                    <div class="icon"><i data-lucide="refresh-cw"></i></div>
-                    <div class="feature-text"><h3>Auto-Reboot</h3>
-                    <p>Auto restart after wipe. Pull USB, insert OS media.</p></div>
-                </div>
-            </div>
+<!-- ───────── MODES ───────── -->
+<section id="modes">
+  <div class="wrap">
+    <span class="eyebrow reveal">Erase modes</span>
+    <h2 class="title reveal">Two modes. <span class="r">One choice.</span></h2>
+    <p class="lead reveal">GRUB waits three seconds. Touch nothing and Quick mode starts; pick Full for sensitive data.</p>
+    <div class="modes">
+      <div class="mode q reveal">
+        <span class="tag">DEFAULT</span>
+        <h3>&gt; Quick</h3>
+        <div class="tm">~15–20 min for an 80 GB disk</div>
+        <div class="passes" data-seq="1"><span>0x00</span></div>
+        <ul>
+          <li>1-pass zero fill of every sector, MBR included</li>
+          <li>Starts automatically after the 3-second GRUB timeout</li>
+          <li>Made for internet cafés, offices and labs</li>
+          <li>Clears boot-sector malware along with the data</li>
+        </ul>
+        <div class="kbd">kernel flag <code>fastborn.mode=quick</code> · log method <code>quick-1pass-zero</code></div>
+      </div>
+      <div class="mode f reveal">
+        <span class="tag">SENSITIVE DATA</span>
+        <h3>&gt; Full</h3>
+        <div class="tm">~2+ hours for an 80 GB disk</div>
+        <div class="passes" data-seq="7"><span>0x00</span><span>0xFF</span><span>RND</span><span>0x00</span><span>0xFF</span><span>RND</span><span>RND</span></div>
+        <ul>
+          <li>DoD 5220.22-M, seven overwrite passes via nwipe</li>
+          <li>Mersenne Twister PRNG for the random passes</li>
+          <li>For drives that held sensitive data</li>
+          <li>Selected manually from the GRUB menu</li>
+        </ul>
+        <div class="kbd">kernel flag <code>fastborn.mode=full</code> · log method <code>full-dod522022m-7pass</code></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────── COMPARE ───────── -->
+<section id="compare" style="padding-top:40px">
+  <div class="wrap">
+    <span class="eyebrow reveal">Comparison</span>
+    <h2 class="title reveal">DBAN is gone. <span class="g">This isn't.</span></h2>
+    <p class="lead reveal">DBAN was sold to Blancco and frozen on an ancient kernel; nwipe is great but isn't bootable on its own. FastBorn wraps a modern kernel and nwipe into a zero-touch stick.</p>
+    <div class="panel reveal cmp-wrap">
+      <table class="cmp" id="cmp">
+        <thead><tr><th>Feature</th><th class="me">FastBorn</th><th>DBAN</th><th>nwipe</th></tr></thead>
+        <tbody>
+          <tr><td>Zero-touch (plug &amp; run)</td><td class="me">█ YES</td><td class="no">— NO</td><td class="no">— NO</td></tr>
+          <tr><td>NVMe support</td><td class="me">█ YES</td><td class="no">— NO</td><td>█ YES</td></tr>
+          <tr><td>Quick mode (1-pass)</td><td class="me">█ YES</td><td class="no">— NO</td><td>█ YES</td></tr>
+          <tr><td>JSON erasure report</td><td class="me">█ YES</td><td class="no">— NO</td><td class="no">— NO</td></tr>
+          <tr><td>Verification pass</td><td class="me">█ YES</td><td class="no">— NO</td><td class="no">— NO</td></tr>
+          <tr><td>Auto-reboot</td><td class="me">█ YES</td><td class="no">— NO</td><td class="no">— NO</td></tr>
+          <tr><td>Modern kernel</td><td class="me">█ 6.6 LTS</td><td class="no">— 2.6.x</td><td class="mid">~ depends on distro</td></tr>
+          <tr><td>Bootable ISO</td><td class="me">█ YES</td><td>█ YES</td><td class="no">— needs ShredOS</td></tr>
+          <tr><td>Active development</td><td class="me">█ YES</td><td class="no">— sold to Blancco</td><td>█ YES</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ───────── INSTALL ───────── -->
+<section id="install">
+  <div class="wrap">
+    <span class="eyebrow reveal">Install</span>
+    <h2 class="title reveal">Write it to <span class="g">USB.</span></h2>
+    <p class="lead reveal">One ~20 MB ISO, runs entirely from RAM and never touches the target disks while booting. The boot stick itself is excluded automatically (<code class="g">removable=1</code>).</p>
+    <div class="install">
+      <div class="panel reveal">
+        <div class="tabs" id="osTabs"><button class="on" data-t="win">Windows</button><button data-t="mac">macOS</button><button data-t="lin">Linux</button></div>
+        <div class="tabp" data-p="win">
+          <div class="line"><span class="n">01</span><span>Download <a href="https://rufus.ie" target="_blank" rel="noopener">Rufus</a> (portable, no install)</span></div>
+          <div class="line"><span class="n">02</span><span>Plug in the USB stick and select it as <b>Device</b></span></div>
+          <div class="line"><span class="n">03</span><span>Boot selection → <code>fastborn.iso</code></span></div>
+          <div class="line"><span class="n">04</span><span>Partition scheme <code>MBR</code> · target <code>BIOS or UEFI</code></span></div>
+          <div class="line"><span class="n">05</span><span>START → choose <b style="color:var(--amber)">DD Image</b> mode → OK</span></div>
+          <div class="line"><span class="n">alt</span><span class="c">balenaEtcher: Flash from file → select target → Flash!</span></div>
         </div>
-    </section>
-
-    <!-- VS COMPARISON -->
-    <section>
-        <div class="container">
-            <div class="section-header">// COMPARISON</div>
-            <div class="section-title">FastBorn vs <span class="highlight">DBAN</span> vs <span
-                    class="highlight">nwipe</span></div>
-
-            <table class="comparison-table">
-                <thead>
-                    <tr>
-                        <th>Feature</th>
-                        <th>FastBorn</th>
-                        <th>DBAN</th>
-                        <th>nwipe</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>Zero-touch</td>
-                        <td class="check">&#x2588; YES</td>
-                        <td class="cross">- NO</td>
-                        <td class="cross">- NO</td>
-                    </tr>
-                    <tr>
-                        <td>NVMe support</td>
-                        <td class="check">&#x2588; YES</td>
-                        <td class="cross">- NO</td>
-                        <td class="check">&#x2588; YES</td>
-                    </tr>
-                    <tr>
-                        <td>Quick mode</td>
-                        <td class="check">&#x2588; YES</td>
-                        <td class="cross">- NO</td>
-                        <td class="check">&#x2588; YES</td>
-                    </tr>
-                    <tr>
-                        <td>JSON log</td>
-                        <td class="check">&#x2588; YES</td>
-                        <td class="cross">- NO</td>
-                        <td class="cross">- NO</td>
-                    </tr>
-                    <tr>
-                        <td>Verification</td>
-                        <td class="check">&#x2588; YES</td>
-                        <td class="cross">- NO</td>
-                        <td class="cross">- NO</td>
-                    </tr>
-                    <tr>
-                        <td>Auto-reboot</td>
-                        <td class="check">&#x2588; YES</td>
-                        <td class="cross">- NO</td>
-                        <td class="cross">- NO</td>
-                    </tr>
-                    <tr>
-                        <td>Modern kernel</td>
-                        <td class="check">&#x2588; 6.6 LTS</td>
-                        <td class="cross">- 2.6.x</td>
-                        <td>~ depends on distro</td>
-                    </tr>
-                    <tr>
-                        <td>Bootable ISO</td>
-                        <td class="check">&#x2588; YES</td>
-                        <td class="check">&#x2588; YES</td>
-                        <td class="cross">- needs ShredOS</td>
-                    </tr>
-                    <tr>
-                        <td>Active development</td>
-                        <td class="check">&#x2588; YES</td>
-                        <td class="cross">- Sold to Blancco</td>
-                        <td class="check">&#x2588; YES</td>
-                    </tr>
-                </tbody>
-            </table>
+        <div class="tabp" data-p="mac" hidden>
+          <div class="line"><span class="n">01</span><code>diskutil list</code><span class="c"># find the USB disk number</span></div>
+          <div class="line"><span class="n">02</span><code>diskutil unmountDisk /dev/diskX</code><button class="cp" data-copy="diskutil unmountDisk /dev/diskX">copy</button></div>
+          <div class="line"><span class="n">03</span><code>sudo dd if=fastborn.iso of=/dev/rdiskX bs=1m status=progress</code><button class="cp" data-copy="sudo dd if=fastborn.iso of=/dev/rdiskX bs=1m status=progress">copy</button></div>
+          <div class="line"><span class="n">04</span><code>diskutil eject /dev/diskX</code><button class="cp" data-copy="diskutil eject /dev/diskX">copy</button></div>
         </div>
-    </section>
-
-    <!-- INSTALL -->
-    <section>
-        <div class="container">
-            <div class="section-header">// INSTALL</div>
-            <div class="section-title">Write to <span class="highlight">USB</span></div>
-
-            <div>
-                <div class="install-tabs">
-                    <button class="install-tab active" onclick="showTab('windows')">Windows</button>
-                    <button class="install-tab" onclick="showTab('macos')">macOS</button>
-                    <button class="install-tab" onclick="showTab('linux')">Linux</button>
-                </div>
-
-                <div id="tab-windows" class="install-content active">
-                    <div class="install-panel">
-                        <div class="step"><span class="step-num">1.</span> Download <a href="https://rufus.ie"
-                                style="color:var(--cyan)" target="_blank" rel="noopener">Rufus</a> (portable, no install needed)</div>
-                        <div class="step"><span class="step-num">2.</span> Plug in USB flash drive</div>
-                        <div class="step"><span class="step-num">3.</span> Device: select USB | Boot selection:
-                            <code>fastborn.iso</code></div>
-                        <div class="step"><span class="step-num">4.</span> Partition: <code>MBR</code> | Target:
-                            <code>BIOS or UEFI</code></div>
-                        <div class="step"><span class="step-num">5.</span> START &rarr; select <strong
-                                style="color:var(--yellow)">DD Image</strong> mode &rarr; OK</div>
-                    </div>
-                </div>
-
-                <div id="tab-macos" class="install-content">
-                    <div class="install-panel">
-                        <div class="step"><code>diskutil list</code> <span class="output"># find your USB disk number</span></div>
-                        <div class="step"><code>diskutil unmountDisk /dev/diskX</code></div>
-                        <div class="step"><code>sudo dd if=fastborn.iso of=/dev/rdiskX bs=1m status=progress</code>
-                        </div>
-                        <div class="step"><code>diskutil eject /dev/diskX</code></div>
-                    </div>
-                </div>
-
-                <div id="tab-linux" class="install-content">
-                    <div class="install-panel">
-                        <div class="step"><code>lsblk</code> <span class="output"># find your USB device</span></div>
-                        <div class="step">
-                            <code>sudo dd if=fastborn.iso of=/dev/sdX bs=1M status=progress conv=fsync</code></div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="hash-block">
-                <div>
-                    <div class="hash-label">MD5 CHECKSUM</div>
-                    <div class="hash-value">377a24b63f53475099860d8f57a090a5</div>
-                </div>
-            </div>
+        <div class="tabp" data-p="lin" hidden>
+          <div class="line"><span class="n">01</span><code>lsblk</code><span class="c"># find the USB device</span></div>
+          <div class="line"><span class="n">02</span><code>sudo dd if=fastborn.iso of=/dev/sdX bs=1M status=progress conv=fsync</code><button class="cp" data-copy="sudo dd if=fastborn.iso of=/dev/sdX bs=1M status=progress conv=fsync">copy</button></div>
         </div>
-    </section>
+      </div>
+      <div class="panel brk dl-card reveal">
+        <div class="ver">v1.0</div>
+        <div class="meta">fastborn.iso · 19.9 MB · BIOS + UEFI · Linux 6.6 LTS</div>
+        <a class="btn solid" href="https://github.com/badursun/Fastborn/releases/latest/download/fastborn.iso">↓ Download ISO</a>
+        <div class="hash">SHA-256
+          <div class="row"><code id="sha">6f1380a91a61bec991f5e6787a75df8b62c86ed69685c9539fdd86d9bf6a29dc</code></div>
+          <button class="cp" style="margin:8px 0 0" data-copy="6f1380a91a61bec991f5e6787a75df8b62c86ed69685c9539fdd86d9bf6a29dc">copy hash</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
-    <!-- JSON LOG -->
-    <section>
-        <div class="container">
-            <div class="section-header">// LOGGING</div>
-            <div class="section-title">JSON <span class="highlight">Erasure Report</span></div>
-            <p style="font-size:0.8rem;margin-bottom:24px;color:#888">Automatically written to USB under <code
-                    style="color:var(--green)">/fastborn-logs/</code> for each disk.</p>
+<!-- ───────── V2 ───────── -->
+<section id="v2" style="background:linear-gradient(180deg,transparent,rgba(255,43,68,.025),transparent)">
+  <div class="wrap">
+    <span class="eyebrow reveal">V2 · in development</span>
+    <h2 class="title reveal">Next: <span class="r">evidence you can sign.</span></h2>
+    <p class="lead reveal">V2 rebuilds FastBorn around fail-closed safety and verifiable evidence: native sanitize commands, full readback, parallel coordination and cryptographically signed sanitization certificates.</p>
+    <div class="v2-note reveal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 2 21h20zM12 10v5M12 18h.01"/></svg><span>V2 is <b>not a qualified release yet</b>. Normal V2 images ship without an arming document and deliberately stop before any erase command; destructive engines run only in guarded QEMU lab images. Download v1.0 for real use today.</span></div>
+    <div class="track">
+      <div class="ms reveal"><span class="dot"></span><h4>M0–M1</h4><ul><li>Boot &amp; packaging repair</li><li>Boot / report media protection</li><li>Preflight records</li><li>Durable per-disk job state</li></ul></div>
+      <div class="ms reveal"><span class="dot"></span><h4>M2</h4><ul><li>HDD overwrite + full readback</li><li>Fail-closed ATA / NVMe inspection</li><li>NVMe Format &amp; Sanitize, ATA Sanitize</li><li>Exact-match hardware qualification gate</li></ul></div>
+      <div class="ms reveal"><span class="dot"></span><h4>M3</h4><ul><li>Failure-isolated parallel coordinator</li><li>Hashed, frozen execution manifest</li><li>5-second auto / manual boot choice</li><li>Target control panel &amp; arming gate</li></ul></div>
+      <div class="ms reveal"><span class="dot"></span><h4>M4a–c</h4><ul><li>Detached Ed25519 report signatures</li><li>NIST Appendix C aligned certificates</li><li>Dual-control concurrence</li><li>Disconnected HSM signing ceremony</li></ul></div>
+      <div class="ms reveal"><span class="dot"></span><h4>M4d–e</h4><ul><li>RFC 3161 timestamped evidence vault</li><li>Signed registry &amp; ledger checkpoints</li><li>Tenant-scoped read-only evidence API</li></ul></div>
+    </div>
+    <div class="next">
+      <div class="reveal"><b>Physical qualification</b>NVMe / ATA Sanitize bench runs incl. power loss &amp; reset</div>
+      <div class="reveal"><b>Production arming</b>signed arming &amp; release ceremony</div>
+      <div class="reveal"><b>Managed trust</b>HSM, production TSA, WORM evidence store</div>
+      <div class="reveal"><b>Independent evaluation</b>before any certification claims</div>
+    </div>
+    <p class="reveal" style="margin-top:26px;font-size:13px"><a class="g" href="https://github.com/badursun/Fastborn/blob/main/docs/v2-development.md" target="_blank" rel="noopener">Read the V2 development guide →</a></p>
+  </div>
+</section>
 
-            <div class="json-block">
-                <pre>
-{
-  <span class="json-key">"tool"</span>: <span class="json-string">"FastBorn v1.0"</span>,
-  <span class="json-key">"timestamp"</span>: <span class="json-string">"2026-03-20T14:30:00Z"</span>,
-  <span class="json-key">"hostname"</span>: <span class="json-string">"PC-042"</span>,
-  <span class="json-key">"disk"</span>: {
-    <span class="json-key">"device"</span>: <span class="json-string">"/dev/sda"</span>,
-    <span class="json-key">"model"</span>: <span class="json-string">"WDC WD5000AAKX"</span>,
-    <span class="json-key">"serial"</span>: <span class="json-string">"WD-ABC123"</span>,
-    <span class="json-key">"size"</span>: <span class="json-string">"465GB"</span>,
-    <span class="json-key">"size_bytes"</span>: <span class="json-number">500107862016</span>
-  },
-  <span class="json-key">"erasure"</span>: {
-    <span class="json-key">"method"</span>: <span class="json-string">"quick-1pass-zero"</span>,
-    <span class="json-key">"duration_seconds"</span>: <span class="json-number">1024</span>,
-    <span class="json-key">"status"</span>: <span class="json-string">"success"</span>
-  },
-  <span class="json-key">"verification"</span>: {
-    <span class="json-key">"result"</span>: <span class="json-string">"PASS"</span>,
-    <span class="json-key">"sectors_checked"</span>: <span class="json-number">100</span>
+<!-- ───────── WARNING ───────── -->
+<section id="warning" style="padding-top:40px">
+  <div class="wrap">
+    <div class="warn reveal">
+      <div class="hazard"></div>
+      <div class="warn-body">
+        <h3 id="warnH">IRREVERSIBLE. THERE IS NO UNDO.</h3>
+        <p class="sub2">FastBorn is built to destroy data. Treat the stick like a loaded tool.</p>
+        <ul>
+          <li><b>All internal disks</b> are wiped on boot — auto mode has no confirmation prompt</li>
+          <li>Do not plug it into the wrong machine — <b>you will lose everything</b></li>
+          <li>Boot USB is auto-excluded via <b>removable=1</b> detection — still verify your setup</li>
+          <li>5-second window before erasure starts — <b>Ctrl+C</b> aborts</li>
+        </ul>
+      </div>
+      <div class="hazard"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────── BUILD ───────── -->
+<section id="build">
+  <div class="wrap">
+    <span class="eyebrow reveal">Build from source</span>
+    <h2 class="title reveal">Reproducible, <span class="g">in Docker.</span></h2>
+    <div class="build">
+      <div class="panel reveal">
+        <div class="panel-head"><span class="dots"><i></i><i></i><i></i></span>terminal</div>
+        <div class="term" id="buildTerm"></div>
+      </div>
+      <div class="reveal">
+        <p class="lead" style="margin:0 0 18px">Only Docker Desktop is required. The build produces a single hybrid ISO in <code class="g">output/fastborn.iso</code> that boots on both legacy BIOS and UEFI machines, from USB or CD.</p>
+        <div class="line"><span class="n">→</span><span>Runs from RAM — target disks untouched during boot</span></div>
+        <div class="line"><span class="n">→</span><span>Parallel wipe of SATA, HDD and NVMe devices</span></div>
+        <div class="line"><span class="n">→</span><span>Per-disk JSON logs in <code>/fastborn-logs/</code> on the stick</span></div>
+        <div class="line"><span class="n">→</span><span>5-second countdown, then automatic reboot</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="final">
+  <div class="wrap reveal">
+    <h2><span class="g">Drives end.</span><br><span class="r">Privacy lives.</span></h2>
+    <p class="cursor-blink">wipe today. a safer tomorrow</p>
+    <div class="hero-cta">
+      <a class="btn solid" href="https://github.com/badursun/Fastborn/releases/latest/download/fastborn.iso">↓ Download ISO</a>
+      <a class="btn" href="https://github.com/badursun/Fastborn" target="_blank" rel="noopener">★ Star on GitHub</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span><span class="g">FASTB</span><span class="r">ORN</span> · MIT · no warranty — use at your own risk</span>
+    <div class="rt">
+      <a href="https://github.com/badursun/Fastborn/blob/main/README-tr.md" target="_blank" rel="noopener">Türkçe</a>
+      <a href="https://github.com/badursun/Fastborn/releases" target="_blank" rel="noopener">Releases</a>
+      <a href="https://github.com/badursun/Fastborn/issues" target="_blank" rel="noopener">Issues</a>
+      <a href="https://github.com/badursun" target="_blank" rel="noopener">@badursun</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+(() => {
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const rand = (a, b) => a + Math.random() * (b - a);
+const onScreen = (el, cb, opts = {}) => new IntersectionObserver(([e]) => cb(e.isIntersecting), opts).observe(el);
+
+/* ── nav, reveal, copy, tabs ─────────────────── */
+addEventListener("scroll", () => $("#nav").classList.toggle("scrolled", scrollY > 20), { passive: true });
+const rio = new IntersectionObserver((es) => es.forEach((e) => {
+  if (!e.isIntersecting) return;
+  const sib = [...e.target.parentElement.children].filter((c) => c.classList.contains("reveal"));
+  e.target.style.transitionDelay = Math.min(sib.indexOf(e.target), 6) * 80 + "ms";
+  e.target.classList.add("in"); rio.unobserve(e.target);
+}), { threshold: .12 });
+$$(".reveal").forEach((el) => rio.observe(el));
+$$(".cp").forEach((b) => b.addEventListener("click", async () => {
+  const t = b.textContent;
+  try { await navigator.clipboard.writeText(b.dataset.copy); b.textContent = "copied"; b.classList.add("done"); } catch { b.textContent = "select + copy"; }
+  setTimeout(() => { b.textContent = t; b.classList.remove("done"); }, 1400);
+}));
+$("#osTabs").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  $$("#osTabs button").forEach((x) => x.classList.toggle("on", x === b));
+  $$(".tabp").forEach((p) => (p.hidden = p.dataset.p !== b.dataset.t));
+});
+// Default the OS tab to the visitor's platform
+const plat = (navigator.userAgentData?.platform || navigator.platform || "").toLowerCase();
+if (plat.includes("mac")) $('#osTabs [data-t="mac"]').click();
+else if (plat.includes("linux")) $('#osTabs [data-t="lin"]').click();
+
+/* ── hero: typed tagline + red glitch ────────── */
+const TAG = "Plug USB. Boot. Wait. Done.";
+(function type(i = 0) {
+  $("#typed").textContent = TAG.slice(0, i);
+  if (i < TAG.length) setTimeout(() => type(i + 1), reduced ? 0 : 55 + Math.random() * 60);
+})();
+const subRed = $("#subRed");
+setInterval(() => {
+  if (reduced) return;
+  subRed.textContent = subRed.textContent === "erasure tool" ? "data destruction" : "erasure tool";
+  subRed.classList.remove("glitching"); void subRed.offsetWidth; subRed.classList.add("glitching");
+}, 4200);
+
+/* ── hero: pixel wordmark particles ──────────── */
+const wm = $("#wm"), wctx = wm.getContext("2d");
+const STEP = 4, SRC_W = 680, SRC_H = 130;
+let parts = [], glow = null, cell = 4, ox = 0, oy = 0, wmW = 0, wmH = 0, pointer = null, heroOn = true;
+const img = new Image();
+img.src = "assets/wordmark.png";
+img.onload = () => {
+  const off = document.createElement("canvas"); off.width = SRC_W; off.height = SRC_H;
+  const o = off.getContext("2d"); o.drawImage(img, 0, 0);
+  const d = o.getImageData(0, 0, SRC_W, SRC_H).data;
+  for (let y = 0; y + 2 < SRC_H; y += STEP) for (let x = 0; x + 2 < SRC_W; x += STEP) {
+    const k = ((y + 2) * SRC_W + x + 2) * 4, r = d[k], g = d[k + 1], b = d[k + 2];
+    if (Math.max(r, g, b) < 95) continue;
+    const red = r > g;
+    parts.push({ hx: x / STEP, hy: y / STEP, x: rand(-40, SRC_W / STEP + 40), y: rand(-30, SRC_H / STEP + 30), vx: 0, vy: 0,
+      c: `rgb(${r},${g},${b})`, red, free: 0, a: 1 });
   }
-}</pre>
-            </div>
-        </div>
-    </section>
+  glow = document.createElement("canvas"); glow.width = SRC_W + 80; glow.height = SRC_H + 80;
+  const gc = glow.getContext("2d"); gc.filter = "blur(14px)"; gc.drawImage(img, 40, 40);
+  sizeWm();
+  if (reduced) parts.forEach((p) => { p.x = p.hx; p.y = p.hy; });
+};
+function sizeWm() {
+  const dpr = Math.min(devicePixelRatio || 1, 2);
+  const W = wm.parentElement.clientWidth;
+  wmW = Math.min(W * .86, 920); cell = wmW / (SRC_W / STEP); wmH = cell * (SRC_H / STEP);
+  const H = wmH + 40;
+  wm.width = W * dpr; wm.height = H * dpr; wm.style.height = H + "px";
+  wctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ox = (W - wmW) / 2; oy = 20;
+}
+addEventListener("resize", () => { if (parts.length) sizeWm(); });
+wm.addEventListener("pointermove", (e) => { const r = wm.getBoundingClientRect(); pointer = { x: (e.clientX - r.left - ox) / cell, y: (e.clientY - r.top - oy) / cell }; });
+wm.addEventListener("pointerleave", () => (pointer = null));
+let glitchRow = -1, glitchOff = 0, glitchT = 0;
+function shred() {
+  // the red half tears off to the right, then reassembles
+  for (const p of parts) if (p.red || (p.hx > 95 && Math.random() < .25)) {
+    p.free = rand(40, 90); p.vx = rand(.2, 1.6); p.vy = rand(-.35, .35);
+  }
+}
+function drawWm() {
+  const W = wm.width, H = wm.height;
+  wctx.clearRect(0, 0, W, H);
+  if (!parts.length) return;
+  if (glow) { wctx.globalAlpha = .7; wctx.drawImage(glow, ox - 40 * (wmW / SRC_W), oy - 40 * (wmW / SRC_W), glow.width * (wmW / SRC_W), glow.height * (wmW / SRC_W)); wctx.globalAlpha = 1; }
+  // random ambient disintegration on the red side
+  if (!reduced && Math.random() < .5) {
+    const p = parts[(Math.random() * parts.length) | 0];
+    if (p.red && !p.free) { p.free = rand(30, 80); p.vx = rand(.3, 1.2); p.vy = rand(-.2, .2); }
+  }
+  if (glitchT > 0) glitchT--; else if (!reduced && Math.random() < .012) { glitchRow = (Math.random() * (SRC_H / STEP)) | 0; glitchOff = rand(-4, 4); glitchT = 6; }
+  const s = cell * .92;
+  for (const p of parts) {
+    if (!reduced) {
+      if (p.free > 0) { p.free--; p.x += p.vx; p.y += p.vy; p.vx *= 1.02; p.a = Math.max(.15, p.a - .012); }
+      else {
+        p.vx += (p.hx - p.x) * .06; p.vy += (p.hy - p.y) * .06;
+        if (pointer) { const dx = p.x - pointer.x, dy = p.y - pointer.y, d2 = dx * dx + dy * dy; if (d2 < 60) { const f = (60 - d2) / 60 * .9; p.vx += dx * f * .2; p.vy += dy * f * .2; } }
+        p.vx *= .8; p.vy *= .8; p.x += p.vx; p.y += p.vy; p.a = Math.min(1, p.a + .05);
+      }
+    }
+    let x = p.x; if (glitchT > 0 && Math.abs(p.hy - glitchRow) < 2) x += glitchOff;
+    wctx.globalAlpha = p.a; wctx.fillStyle = p.c;
+    wctx.fillRect(ox + x * cell, oy + p.y * cell, s, s);
+  }
+  wctx.globalAlpha = 1;
+}
+if (!reduced) setInterval(() => { if (heroOn && !document.hidden) shred(); }, 6500);
 
-    <!-- WARNING -->
-    <section class="warning-section">
-        <div class="container">
-            <div class="warning-banner">
-                <div class="warning-header">
-                    <i data-lucide="alert-triangle"></i>
-                    <span>Classified — Operational Warning</span>
-                </div>
-                <div class="warning-body">
-                    <div class="warn-headline">This tool performs irreversible military-grade<br>data destruction. There is no undo.</div>
-                    <ul class="warning-items">
-                        <li><strong>All internal disks</strong> are wiped on boot — no confirmation prompt in auto mode</li>
-                        <li>Data destroyed with DoD 5220.22-M (7-pass) is <strong>unrecoverable by any known method</strong></li>
-                        <li>Do not insert this USB into the wrong machine — <strong>you will lose everything</strong></li>
-                        <li>USB boot drive is auto-excluded (<strong>removable=1</strong> detection) — but verify your setup</li>
-                        <li>5-second abort window before erasure begins — <strong>Ctrl+C</strong> to cancel</li>
-                    </ul>
-                </div>
-                <div class="warning-footer">FastBorn v1.0 — Use at your own risk — No warranty expressed or implied</div>
-            </div>
-        </div>
-    </section>
+/* ── hero: drives ─────────────────────────────── */
+const CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg>';
+const drives = $$("#rig .drive").map((el, i) => {
+  const ok = el.classList.contains("ok");
+  el.innerHTML = `<div class="dl">${el.dataset.label}</div><div class="ds"></div><div class="bar">${"<i></i>".repeat(16)}</div>` +
+    (ok ? `<div class="dd">${CHECK}ERASED</div>` : `<div class="dd">! ${["UNRECOVERABLE", "OVERWRITTEN", "SHREDDED"][i - 3]}</div>`);
+  return { el, ok, verb: el.dataset.verb, p: rand(-40, 60), hold: 0, cells: $$(".bar i", el), ds: $(".ds", el) };
+});
+function tickDrives() {
+  for (const d of drives) {
+    if (d.hold > 0) { d.hold--; if (d.hold === 0) { d.p = 0; d.el.classList.remove("done"); } continue; }
+    d.p += d.ok ? rand(.2, .9) : rand(.15, .7);
+    const pct = Math.max(0, Math.min(100, d.p));
+    const lit = Math.round(pct / 100 * 16);
+    d.cells.forEach((c, i) => c.classList.toggle("on", i < lit));
+    d.ds.textContent = d.ok ? `> WIPING... ${pct | 0}%` : `> ${d.verb}... ${pct | 0}%`;
+    if (!d.ok && Math.random() < .08) { d.el.classList.remove("jit"); void d.el.offsetWidth; d.el.classList.add("jit"); spawnDebris(d.el, 3); }
+    if (d.p >= 100) { d.hold = 110; d.el.classList.add("done"); d.ds.textContent = d.ok ? "> WIPING... 100%" : `> ${d.verb}... 100%`; if (!d.ok) spawnDebris(d.el, 40); }
+  }
+}
 
-    <!-- BUILD FROM SOURCE -->
-    <section>
-        <div class="container">
-            <div class="section-header">// BUILD</div>
-            <div class="section-title">Build from <span class="highlight">Source</span></div>
+/* ── hero: fx canvas (streams + debris + dust) ─ */
+const fx = $("#fx"), fctx = fx.getContext("2d"), hero = $(".hero");
+let FW = 0, FH = 0;
+const streams = [], debris = [], dust = [];
+function sizeFx() {
+  const dpr = Math.min(devicePixelRatio || 1, 2);
+  FW = fx.clientWidth; FH = fx.clientHeight; fx.width = FW * dpr; fx.height = FH * dpr; fctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+sizeFx(); addEventListener("resize", sizeFx);
+for (let i = 0; i < 60; i++) dust.push({ x: Math.random(), y: Math.random(), s: rand(1, 3), v: rand(.0002, .0008), p: Math.random() * 6 });
+const rel = (el) => { const r = el.getBoundingClientRect(), h = hero.getBoundingClientRect(); return { x: r.left - h.left + r.width / 2, y: r.top - h.top + r.height / 2, w: r.width, h: r.height, l: r.left - h.left, t: r.top - h.top }; };
+function spawnDebris(el, n) {
+  const r = rel(el);
+  for (let i = 0; i < n; i++) debris.push({ x: r.l + r.w * rand(.3, 1), y: r.t + r.h * rand(0, .8), vx: rand(.5, 4), vy: rand(-3, .5), s: rand(2, 6), a: 1, c: Math.random() < .7 ? "255,43,68" : "40,20,22", rot: rand(0, 6) });
+}
+function spawnStream() {
+  const usb = $("#usb"); if (!usb.offsetParent) return;
+  const u = rel(usb), d = drives[(Math.random() * drives.length) | 0];
+  if (!d.el.offsetParent) return;
+  const t = rel(d.el);
+  streams.push({ x0: u.x + (d.ok ? -30 : 30), y0: u.y - 10, x1: t.x, y1: t.t + 12, cx: (u.x + t.x) / 2, cy: Math.min(u.y, t.t) - rand(40, 140), t: 0, sp: rand(.008, .016), ok: d.ok, w: rand(1, 2.4), jit: rand(4, 12) });
+}
+const bez = (s, t) => ({ x: (1 - t) ** 2 * s.x0 + 2 * (1 - t) * t * s.cx + t * t * s.x1, y: (1 - t) ** 2 * s.y0 + 2 * (1 - t) * t * s.cy + t * t * s.y1 });
+let frame = 0;
+function drawFx() {
+  fctx.clearRect(0, 0, FW, FH);
+  // dust: green drifts on the left half, red on the right
+  for (const p of dust) {
+    p.y -= p.v; p.p += .02; if (p.y < 0) { p.y = 1; p.x = Math.random(); }
+    const red = p.x > .5;
+    fctx.fillStyle = red ? `rgba(255,43,68,${.25 + Math.sin(p.p) * .15})` : `rgba(34,255,94,${.25 + Math.sin(p.p) * .15})`;
+    fctx.fillRect(p.x * FW, p.y * FH, p.s, p.s);
+  }
+  fctx.globalCompositeOperation = "lighter";
+  if (frame % 3 === 0 && streams.length < 40) spawnStream();
+  for (let i = streams.length - 1; i >= 0; i--) {
+    const s = streams[i]; s.t += s.sp;
+    if (s.t >= 1) { streams.splice(i, 1); continue; }
+    const col = s.ok ? "34,255,94" : "255,43,68";
+    fctx.strokeStyle = `rgba(${col},${.8 * Math.sin(s.t * Math.PI)})`; fctx.lineWidth = s.w;
+    fctx.beginPath();
+    for (let k = 0; k <= 8; k++) {
+      const tt = Math.max(0, s.t - .12 + k * .015), p = bez(s, tt);
+      const j = s.ok ? 0 : (Math.random() - .5) * s.jit * .4;
+      k ? fctx.lineTo(p.x, p.y + j) : fctx.moveTo(p.x, p.y + j);
+    }
+    fctx.stroke();
+  }
+  fctx.globalCompositeOperation = "source-over";
+  for (let i = debris.length - 1; i >= 0; i--) {
+    const p = debris[i]; p.vy += .12; p.x += p.vx; p.y += p.vy; p.a -= .014; p.rot += .1;
+    if (p.a <= 0) { debris.splice(i, 1); continue; }
+    fctx.save(); fctx.translate(p.x, p.y); fctx.rotate(p.rot); fctx.fillStyle = `rgba(${p.c},${p.a})`; fctx.fillRect(-p.s / 2, -p.s / 2, p.s, p.s); fctx.restore();
+  }
+}
+onScreen(hero, (v) => (heroOn = v));
+function loop() {
+  if (heroOn && !document.hidden) { frame++; drawWm(); if (!reduced) { drawFx(); if (frame % 3 === 0) tickDrives(); } }
+  requestAnimationFrame(loop);
+}
+if (reduced) drives.forEach((d) => { d.p = 100; }), tickDrives();
+requestAnimationFrame(loop);
 
-            <div class="terminal">
-                <div class="terminal-bar">
-                    <div class="terminal-dot red"></div>
-                    <div class="terminal-dot yellow"></div>
-                    <div class="terminal-dot green"></div>
-                    <div class="terminal-title">terminal</div>
-                </div>
-                <div class="terminal-body">
-                    <span class="prompt">$</span> <span class="command">git clone
-                        https://github.com/badursun/Fastborn.git</span>
-                    <span class="prompt">$</span> <span class="command">cd Fastborn</span>
-                    <span class="prompt">$</span> <span class="command">chmod +x build.sh && ./build.sh</span>
-                    <span class="output">
-                        Building Docker image...
-                        Running ISO builder inside Docker container...
-                    </span><span class="success">ISO created successfully!</span>
-                    <span class="output">
-                        File: output/fastborn.iso
-                        Size: 20M</span>
-                </div>
-            </div>
-            <p style="font-size:0.75rem;color:#666;margin-top:16px">Requires: Docker Desktop</p>
-        </div>
-    </section>
+/* ── wipe lab ─────────────────────────────────── */
+const DRIVES = [
+  { dev: "/dev/sda", model: "WDC WD5000AAKX", serial: "WD-WCC2T1835421", gb: 465, bytes: 500107862016, mbs: 98 },
+  { dev: "/dev/sdb", model: "Samsung SSD 860 EVO 250GB", serial: "S3YHNX0K612345", gb: 232, bytes: 250059350016, mbs: 420 },
+  { dev: "/dev/nvme0n1", model: "Samsung SSD 970 EVO 250GB", serial: "S4EVNX0R712345K", gb: 238, bytes: 250059350016, mbs: 1400 },
+];
+const PASSES = { quick: ["zero"], full: ["zero", "ones", "rand", "zero", "ones", "rand", "rand"] };
+const PLABEL = { zero: "0x00", ones: "0xFF", rand: "RANDOM" };
+const lab = { d: 0, m: "quick", running: false };
+const sc = $("#sectors"), sctx = sc.getContext("2d");
+let COLS = 64, ROWS = 22, N = COLS * ROWS, cells, csz = 10;
+const FILE_COLORS = ["#3b7ea1", "#9a6bd6", "#c9a23a"];
+function seedData() {
+  cells = new Array(N); let i = 0;
+  while (i < N) {
+    const len = (rand(4, 38)) | 0, free = Math.random() < .22;
+    const col = free ? "#1a2a20" : FILE_COLORS[(Math.random() * 3) | 0];
+    for (let k = 0; k < len && i < N; k++, i++) cells[i] = { s: "data", c: col, v: rand(.65, 1) };
+  }
+}
+function sizeLab() {
+  sc.style.width = "0px";
+  const W = sc.parentElement.clientWidth - 32;
+  COLS = W < 500 ? 36 : 64; ROWS = W < 500 ? 26 : 22;
+  const n = COLS * ROWS; if (n !== N || !cells) { N = n; seedData(); }
+  csz = Math.floor(W / COLS);
+  const dpr = Math.min(devicePixelRatio || 1, 2);
+  sc.width = COLS * csz * dpr; sc.height = ROWS * csz * dpr; sc.style.width = COLS * csz + "px";
+  sctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  drawSectors();
+}
+let head = -1, verifySet = new Set(), verifiedSet = new Set();
+function drawSectors() {
+  sctx.fillStyle = "#020503"; sctx.fillRect(0, 0, COLS * csz, ROWS * csz);
+  const g = csz > 7 ? 1 : 0.5;
+  for (let i = 0; i < N; i++) {
+    const c = cells[i], x = (i % COLS) * csz, y = ((i / COLS) | 0) * csz;
+    let fill;
+    if (c.s === "data") fill = c.c;
+    else if (c.s === "zero") fill = "#0b2e16";
+    else if (c.s === "ones") fill = "#c8ffd6";
+    else { const v = (c.v * 120 + 60) | 0; fill = `rgb(${v},${v},${v + 12})`; }
+    sctx.globalAlpha = c.s === "data" ? c.v : 1;
+    sctx.fillStyle = fill; sctx.fillRect(x + g, y + g, csz - g * 2, csz - g * 2);
+  }
+  sctx.globalAlpha = 1;
+  if (head >= 0 && head < N) {
+    const x = (head % COLS) * csz, y = ((head / COLS) | 0) * csz;
+    sctx.shadowColor = "#22ff5e"; sctx.shadowBlur = 16; sctx.fillStyle = "#eaffef"; sctx.fillRect(x, y, csz, csz); sctx.shadowBlur = 0;
+    sctx.fillStyle = "rgba(34,255,94,.25)"; sctx.fillRect(0, y, x, csz);
+  }
+  for (const i of verifySet) {
+    const x = (i % COLS) * csz, y = ((i / COLS) | 0) * csz;
+    sctx.strokeStyle = verifiedSet.has(i) ? "#22ff5e" : "#ffd23f"; sctx.lineWidth = 1.5;
+    sctx.strokeRect(x + .75, y + .75, csz - 1.5, csz - 1.5);
+    if (verifiedSet.has(i)) { sctx.fillStyle = "rgba(34,255,94,.55)"; sctx.fillRect(x + csz * .3, y + csz * .3, csz * .4, csz * .4); }
+  }
+}
+const hexByte = (s) => s === "zero" ? "00" : s === "ones" ? "FF" : ((Math.random() * 256) | 0).toString(16).padStart(2, "0").toUpperCase();
+function drawHex(idx, state) {
+  const lba = Math.floor((idx / N) * (DRIVES[lab.d].bytes / 512));
+  let out = "";
+  for (let r = 0; r < 6; r++) {
+    const addr = ((lba * 512) + r * 16).toString(16).padStart(10, "0").toUpperCase();
+    const bytes = Array.from({ length: 16 }, () => hexByte(state));
+    const cls = state === "data" ? "" : state === "rand" ? "x" : "w";
+    out += `<span class="a">${addr}</span>  <span class="${cls}">${bytes.slice(0, 8).join(" ")}  ${bytes.slice(8).join(" ")}</span>\n`;
+  }
+  $("#hex").innerHTML = `<span class="a">LBA ${lba.toLocaleString("en-US")} · ${state === "data" ? "user data" : "written " + PLABEL[state]}</span>\n` + out;
+}
+function fmtDur(sec) {
+  const h = Math.floor(sec / 3600), m = Math.round((sec % 3600) / 60);
+  return h ? `${h}h ${String(m).padStart(2, "0")}m` : `${m} min`;
+}
+function realSeconds() {
+  const d = DRIVES[lab.d]; return (d.bytes / (d.mbs * 1e6)) * PASSES[lab.m].length;
+}
+function updateEst() {
+  const d = DRIVES[lab.d];
+  $("#estTime").textContent = "~" + fmtDur(realSeconds());
+  $("#devName").textContent = `${d.dev} · ${d.model} · ${d.gb} GB`;
+}
+function pick(group, attr, key) {
+  $(group).addEventListener("click", (e) => {
+    const b = e.target.closest(".opt"); if (!b || lab.running) return;
+    $$(".opt", $(group)).forEach((x) => x.classList.toggle("on", x === b));
+    lab[key] = attr === "d" ? +b.dataset.d : b.dataset.m;
+    resetLab();
+  });
+}
+pick("#drives", "d", "d"); pick("#modesSel", "m", "m");
+function resetLab() {
+  seedData(); head = -1; verifySet.clear(); verifiedSet.clear();
+  $("#doneOv").classList.remove("on");
+  $("#phase").textContent = "READY — DATA PRESENT"; $("#phase").classList.remove("red");
+  $("#pct").textContent = 0; $("#progBar").style.width = "0%"; $("#verN").textContent = 0;
+  $("#report").innerHTML = '<span class="ph">// /fastborn-logs/ report appears here after verification</span>';
+  updateEst(); drawSectors(); drawHex(0, "data");
+}
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+async function runWipe() {
+  if (lab.running) return;
+  lab.running = true; $("#wipeBtn").disabled = true;
+  resetLab();
+  const passes = PASSES[lab.m], total = passes.length;
+  const passMs = lab.m === "quick" ? 4200 : 1900;
+  $("#phase").textContent = "SCANNING — removable=1 → SKIP USB"; await sleep(900);
+  $("#phase").textContent = "ERASURE STARTS IN 5s — CTRL+C ABORTS"; $("#phase").classList.add("red"); await sleep(1100);
+  for (let p = 0; p < total; p++) {
+    const kind = passes[p];
+    $("#phase").textContent = `PASS ${p + 1}/${total} — ${PLABEL[kind]}`;
+    $("#phase").classList.toggle("red", kind !== "zero");
+    const t0 = performance.now();
+    await new Promise((res) => {
+      const step = (now) => {
+        const k = Math.min((now - t0) / passMs, 1), to = Math.floor(k * N);
+        for (let i = Math.max(0, head); i < to; i++) cells[i] = { s: kind, v: Math.random() };
+        head = to;
+        if (kind === "rand") for (let j = 0; j < 30; j++) { const i = (Math.random() * head) | 0; if (cells[i].s === "rand") cells[i].v = Math.random(); }
+        const overall = ((p + k) / total) * 100;
+        $("#pct").textContent = overall.toFixed(0); $("#progBar").style.width = overall + "%";
+        if ((now | 0) % 3 === 0) drawHex(Math.min(head, N - 1), kind);
+        drawSectors();
+        k < 1 ? requestAnimationFrame(step) : res();
+      };
+      requestAnimationFrame(step);
+    });
+    head = -1;
+  }
+  // nwipe finishes with a blanking pass: everything ends at 0x00
+  if (lab.m === "full") {
+    $("#phase").textContent = "FINAL BLANKING — 0x00"; $("#phase").classList.remove("red");
+    for (let i = 0; i < N; i += 1) cells[i] = { s: "zero", v: 0 };
+    drawSectors(); drawHex(N - 1, "zero"); await sleep(500);
+  }
+  $("#phase").textContent = "VERIFY — READING 100 RANDOM SECTORS"; $("#phase").classList.remove("red");
+  while (verifySet.size < 100) verifySet.add((Math.random() * N) | 0);
+  drawSectors(); await sleep(300);
+  let n = 0;
+  for (const i of verifySet) {
+    verifiedSet.add(i); n++; $("#verN").textContent = n;
+    if (n % 4 === 0) { drawSectors(); drawHex(i, "zero"); await sleep(28); }
+  }
+  drawSectors();
+  $("#phase").textContent = "WRITING LOG TO USB";
+  await typeReport();
+  $("#doneSub").textContent = `100/100 SECTORS CLEAN · ${lab.m === "quick" ? "QUICK" : "DoD 7-PASS"}`;
+  $("#doneOv").classList.add("on");
+  for (let s = 5; s > 0; s--) { $("#phase").textContent = `DONE — REBOOTING IN ${s}s`; await sleep(700); }
+  $("#phase").textContent = "SYSTEM REBOOT — PULL USB, INSERT OS MEDIA";
+  lab.running = false; $("#wipeBtn").disabled = false; $("#wipeBtn").textContent = "↻ Wipe again";
+}
+async function typeReport() {
+  const d = DRIVES[lab.d], dur = Math.round(realSeconds());
+  const obj = {
+    tool: "FastBorn v1.0", timestamp: new Date().toISOString().replace(/\.\d+Z$/, "Z"), hostname: "PC-042",
+    disk: { device: d.dev, model: d.model, serial: d.serial, size: d.gb + "GB", size_bytes: d.bytes },
+    erasure: { method: lab.m === "quick" ? "quick-1pass-zero" : "full-dod522022m-7pass", mode: lab.m, duration_seconds: dur, status: "success" },
+    verification: { result: "PASS", sectors_checked: 100 },
+  };
+  const json = JSON.stringify(obj, null, 2);
+  const hl = (s) => s.replace(/("[^"]*")(\s*:)?|\b(\d+)\b/g, (m, str, colon, num) => str ? `<span class="${colon ? "k" : "s"}">${str}</span>${colon || ""}` : `<span class="n">${num}</span>`);
+  const el = $("#report");
+  for (let i = 0; i <= json.length; i += 6) { el.innerHTML = hl(json.slice(0, i)); el.scrollTop = el.scrollHeight; await sleep(10); }
+  el.innerHTML = hl(json);
+}
+$("#wipeBtn").addEventListener("click", runWipe);
+sizeLab(); updateEst(); drawHex(0, "data");
+addEventListener("resize", () => { if (!lab.running) sizeLab(); });
 
-    <!-- footer removed — links moved to hero -->
-</div><!-- /pageable -->
+/* ── mode pass chips ─────────────────────────── */
+$$(".passes").forEach((el) => {
+  const chips = $$("span", el); let i = 0;
+  setInterval(() => { if (reduced) return; chips.forEach((c, k) => c.classList.toggle("on", k === i % (chips.length + 1))); i++; }, chips.length > 1 ? 600 : 1100);
+});
 
-    <script>
-        // Initialize Lucide icons
-        lucide.createIcons();
+/* ── comparison rows ─────────────────────────── */
+const cmp = $("#cmp");
+new IntersectionObserver(([e], o) => { if (e.isIntersecting) { $$("tbody tr", cmp).forEach((r, i) => (r.style.transitionDelay = i * 70 + "ms")); cmp.classList.add("in"); o.disconnect(); } }, { threshold: .2 }).observe(cmp);
 
-        // === Horror glitch effect — isolated to hero section ===
-        (function() {
-            const ascii = document.querySelector('.ascii-art');
-            const horrorFlash = document.getElementById('horror-flash');
-            const subtitle = document.querySelector('.hero-subtitle');
+/* ── warning glitch ──────────────────────────── */
+setInterval(() => { const h = $("#warnH"); h.classList.remove("gl"); void h.offsetWidth; if (!reduced) h.classList.add("gl"); }, 3600);
 
-            // Expose current section for glitch check
-            window._heroGlitchActive = false;
+/* ── boot terminal ───────────────────────────── */
+const L = (text, cls = "output", delay = 120, extra = {}) => ({ text, cls, delay, ...extra });
+const BOOT = [
+  L("SeaBIOS (version rel-1.17.0)", "output", 0), L("Booting from USB...", "output", 400), L(""),
+  L("Welcome to GRUB!", "command", 500),
+  L("  FastBorn -- Quick Erase (1-pass zero) [DEFAULT]", "output", 250),
+  L("  FastBorn -- Full Erase (DoD 7-pass)", "output", 150),
+  L("  Auto-selecting in 3s...", "warning", 700, { count: true }),
+  L("  Auto-selecting in 2s...", "warning", 900, { replace: true }),
+  L("  Auto-selecting in 1s...", "warning", 900, { replace: true }),
+  L("Booting 'FastBorn -- Quick Erase (1-pass zero)'", "command", 900), L("", "", 400),
+  L("  Secure Disk Erasure Tool v1.0 — Quick Mode (1-pass zero)", "prompt", 200),
+  L("  Running from RAM — disks untouched until erasure", "prompt", 200), L("", "", 500),
+  L("[*] Scanning for target disks...", "warning", 500),
+  L("    /sys/block/sda      removable=0  size=976773168", "output", 150),
+  L("    /sys/block/sdb      removable=0  size=488397168", "output", 150),
+  L("    /sys/block/nvme0n1  removable=0  size=500118192", "output", 150),
+  L("    /sys/block/sdc      removable=1  SKIP (USB boot drive)", "warning", 150), L(""),
+  L("[+] Target disks found:", "success", 400),
+  L("    /dev/sda      WDC WD5000AAKX        465 GB", "command", 150),
+  L("    /dev/sdb      Seagate ST250DM000    232 GB", "command", 150),
+  L("    /dev/nvme0n1  Samsung SSD 970 EVO   238 GB", "command", 150), L(""),
+  L("[!] ALL DATA ON 3 DISKS (935 GB) WILL BE PERMANENTLY DESTROYED", "error", 500, { flicker: true }),
+  L("    Erasure starts in 5 seconds... (Ctrl+C to abort)", "warning", 1300), L(""),
+  L("[*] Starting nwipe — method: zero — prng: mersenne", "prompt", 700),
+  L("    /dev/sda      [####----------------]  21%   98MB/s", "output", 600, { bar: "sda" }),
+  L("    /dev/sdb      [#######-------------]  36%  102MB/s", "output", 300, { bar: "sdb" }),
+  L("    /dev/nvme0n1  [##########----------]  52%  412MB/s", "output", 300, { bar: "nvme0n1" }),
+  L("    /dev/nvme0n1  [####################] 100%  done", "success", 900, { bar: "nvme0n1" }),
+  L("    /dev/sdb      [####################] 100%  done", "success", 700, { bar: "sdb" }),
+  L("    /dev/sda      [####################] 100%  done", "success", 900, { bar: "sda" }), L(""),
+  L("[+] nwipe completed successfully", "success", 400), L(""),
+  L("[*] Running verification pass...", "prompt", 500),
+  L("  ✓ /dev/sda — Verification PASSED (100 sectors clean)", "success", 400),
+  L("  ✓ /dev/sdb — Verification PASSED (100 sectors clean)", "success", 300),
+  L("  ✓ /dev/nvme0n1 — Verification PASSED (100 sectors clean)", "success", 300), L(""),
+  L("[*] Writing logs to USB...", "prompt", 400),
+  L("  /fastborn-logs/fastborn_sda_20260320T163543Z.json", "success", 150),
+  L("  /fastborn-logs/fastborn_sdb_20260320T163543Z.json", "success", 150),
+  L("  /fastborn-logs/fastborn_nvme0n1_20260320T163543Z.json", "success", 150), L("", "", 400),
+  L("  ██████╗  ██████╗ ███╗   ██╗███████╗\n  ██╔══██╗██╔═══██╗████╗  ██║██╔════╝\n  ██║  ██║██║   ██║██╔██╗ ██║█████╗\n  ██║  ██║██║   ██║██║╚██╗██║██╔══╝\n  ██████╔╝╚██████╔╝██║ ╚████║███████╗\n  ╚═════╝  ╚═════╝ ╚═╝  ╚═══╝╚══════╝", "success", 200, { pre: true }),
+  L("    All 3 disks erased and verified. Remove the USB drive.", "success", 400),
+  L("    Rebooting in 5s...", "prompt", 900, { count: true }),
+  L("    Rebooting in 4s...", "prompt", 1000, { replace: true }),
+  L("    Rebooting in 3s...", "prompt", 1000, { replace: true }),
+  L("    Rebooting in 2s...", "prompt", 1000, { replace: true }),
+  L("    Rebooting in 1s...", "prompt", 1000, { replace: true }),
+  L("--- SYSTEM REBOOT ---", "error", 800),
+];
+// which workflow step each line lights up
+const STEP_AT = [[0, 2], [3, 3], [28, 4], [38, 5], [50, 6]];
+const term = $("#bootTerm"), crt = $("#crt");
+let bootRunning = false, bootVisible = false;
+onScreen(crt, (v) => { bootVisible = v; if (v && !bootRunning) runBoot(); }, { threshold: .3 });
+async function runBoot() {
+  bootRunning = true; term.innerHTML = ""; $("#crtState").textContent = "booting";
+  setStep(1);
+  let countEl = null; const bars = {};
+  for (let i = 0; i < BOOT.length; i++) {
+    const l = BOOT[i];
+    await sleep(reduced ? 0 : l.delay);
+    const st = STEP_AT.find(([at]) => at === i); if (st) setStep(st[1]);
+    if (l.replace && countEl) { countEl.textContent = l.text; continue; }
+    if (l.bar && bars[l.bar]) { bars[l.bar].textContent = l.text; bars[l.bar].className = l.cls; continue; }
+    const el = document.createElement(l.pre ? "pre" : "div");
+    el.className = l.cls; el.textContent = l.text || " ";
+    term.appendChild(el);
+    if (l.count) countEl = el;
+    if (l.bar) bars[l.bar] = el;
+    if (l.flicker) { crt.classList.remove("flicker"); void crt.offsetWidth; crt.classList.add("flicker"); }
+    term.scrollTop = term.scrollHeight;
+  }
+  $("#crtState").textContent = "rebooted";
+  await sleep(2500);
+  bootRunning = false;
+  if (bootVisible) runBoot(); else { setStep(0); $("#crtState").textContent = "standby"; }
+}
+const stepEls = $$("#flow .step");
+function setStep(n) { stepEls.forEach((s, i) => s.classList.toggle("on", i < n)); }
 
-            function triggerHorror() {
-                // Only fire when hero (section 0) is visible
-                if (window._currentSection !== undefined && window._currentSection !== 0) return;
-
-                // Flash inside hero
-                horrorFlash.classList.add('active');
-                setTimeout(() => horrorFlash.classList.remove('active'), 600);
-
-                // ASCII goes red + glitch
-                ascii.classList.add('horror');
-
-                // Subtitle change
-                const origText = subtitle.textContent;
-                subtitle.textContent = 'DATA DESTRUCTION TOOL';
-                subtitle.style.color = 'var(--red)';
-                subtitle.style.letterSpacing = '4px';
-
-                // Revert after 4s
-                setTimeout(() => {
-                    ascii.classList.remove('horror');
-                    subtitle.textContent = origText;
-                    subtitle.style.color = '';
-                    subtitle.style.letterSpacing = '';
-                }, 4000);
-            }
-
-            // Trigger randomly between 8-15 seconds, recurring
-            function scheduleHorror() {
-                const delay = 8000 + Math.random() * 7000;
-                setTimeout(() => {
-                    triggerHorror();
-                    scheduleHorror();
-                }, delay);
-            }
-
-            // First trigger after 5s
-            setTimeout(() => {
-                triggerHorror();
-                scheduleHorror();
-            }, 5000);
-        })();
-
-        // === Minimal fullpage scroll engine ===
-        (function() {
-            const wrapper = document.getElementById('pageable');
-            const sections = wrapper.querySelectorAll('section');
-            const total = sections.length;
-            let current = 0;
-            window._currentSection = 0;
-            let isAnimating = false;
-            const COOLDOWN = 700; // ms between transitions
-
-            function goTo(index) {
-                if (index < 0 || index >= total || isAnimating) return;
-                isAnimating = true;
-                current = index;
-                window._currentSection = current;
-                wrapper.style.transform = 'translateY(-' + (current * 100) + 'vh)';
-                // Clear horror effects when leaving hero
-                if (current !== 0) {
-                    var hf = document.getElementById('horror-flash');
-                    if (hf) hf.classList.remove('active');
-                    var art = document.querySelector('.ascii-art');
-                    if (art) art.classList.remove('horror');
-                }
-                setTimeout(() => { isAnimating = false; }, COOLDOWN);
-            }
-
-            // Wheel — ignore ALL events during cooldown
-            wrapper.addEventListener('wheel', function(e) {
-                e.preventDefault();
-                if (isAnimating) return;
-
-                // Allow inner scrollable areas
-                const scrollable = e.target.closest('.terminal-body, .comparison-table, .json-block, .install-panel');
-                if (scrollable) {
-                    const atTop = scrollable.scrollTop <= 0;
-                    const atBottom = scrollable.scrollTop + scrollable.clientHeight >= scrollable.scrollHeight - 2;
-                    if ((e.deltaY < 0 && !atTop) || (e.deltaY > 0 && !atBottom)) {
-                        scrollable.scrollTop += e.deltaY;
-                        return;
-                    }
-                }
-
-                if (Math.abs(e.deltaY) > 5) {
-                    goTo(current + (e.deltaY > 0 ? 1 : -1));
-                }
-            }, { passive: false });
-
-            // Touch
-            let touchStartY = 0;
-            wrapper.addEventListener('touchstart', function(e) {
-                touchStartY = e.touches[0].clientY;
-            }, { passive: true });
-
-            wrapper.addEventListener('touchend', function(e) {
-                const diff = touchStartY - e.changedTouches[0].clientY;
-                if (Math.abs(diff) > 40) {
-                    goTo(current + (diff > 0 ? 1 : -1));
-                }
-            }, { passive: true });
-
-            // Keyboard
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ') {
-                    e.preventDefault();
-                    goTo(current + 1);
-                } else if (e.key === 'ArrowUp' || e.key === 'PageUp') {
-                    e.preventDefault();
-                    goTo(current - 1);
-                } else if (e.key === 'Home') {
-                    e.preventDefault();
-                    goTo(0);
-                } else if (e.key === 'End') {
-                    e.preventDefault();
-                    goTo(total - 1);
-                }
-            });
-        })();
-
-        function showTab(name) {
-            document.querySelectorAll('.install-tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.install-content').forEach(c => c.classList.remove('active'));
-            event.target.classList.add('active');
-            document.getElementById('tab-' + name).classList.add('active');
-        }
-
-        /* Boot sequence animation */
-        (function () {
-            const lines = [
-                { text: 'SeaBIOS (version rel-1.17.0)', cls: 'output', delay: 0 },
-                { text: 'Machine UUID: a8f3c2e1-7b4d-4e9a-b6f1-2d8e0c3a5f7b', cls: 'output', delay: 100 },
-                { text: 'Booting from DVD/CD...', cls: 'output', delay: 400 },
-                { text: '', cls: '', delay: 200 },
-                { text: 'Welcome to GRUB!', cls: 'command', delay: 600 },
-                { text: '  FastBorn -- Quick Erase (1-pass zero) [DEFAULT]', cls: 'output', delay: 300 },
-                { text: '> FastBorn -- Full Erase (DoD 7-pass) <<<', cls: 'error', delay: 200 },
-                { text: '', cls: '', delay: 300 },
-                { text: "Booting 'FastBorn -- Full Erase (DoD 7-pass)'...", cls: 'command', delay: 800 },
-                { text: '', cls: '', delay: 600 },
-                { text: '  ███████╗ █████╗ ███████╗████████╗██████╗  ██████╗ ██████╗ ███╗   ██╗', cls: 'error', delay: 100, pre: true },
-                { text: '  ██╔════╝██╔══██╗██╔════╝╚══██╔══╝██╔══██╗██╔═══██╗██╔══██╗████╗  ██║', cls: 'error', delay: 50, pre: true },
-                { text: '  █████╗  ███████║███████╗   ██║   ██████╔╝██║   ██║██████╔╝██╔██╗ ██║', cls: 'error', delay: 50, pre: true },
-                { text: '  ██╔══╝  ██╔══██║╚════██║   ██║   ██╔══██╗██║   ██║██╔══██╗██║╚██╗██║', cls: 'error', delay: 50, pre: true },
-                { text: '  ██║     ██║  ██║███████║   ██║   ██████╔╝╚██████╔╝██║  ██║██║ ╚████║', cls: 'error', delay: 50, pre: true },
-                { text: '  ╚═╝     ╚═╝  ╚═╝╚══════╝   ╚═╝   ╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═══╝', cls: 'error', delay: 50, pre: true },
-                { text: '', cls: '', delay: 100 },
-                { text: '         Secure Disk Erasure Tool v1.0 — Full Mode DoD 5220.22-M (7-pass)', cls: 'prompt', delay: 200 },
-                { text: '         Boot successful — Running from RAM — Disks safe until erasure', cls: 'prompt', delay: 200 },
-                { text: '', cls: '', delay: 800 },
-                { text: '[*] Scanning for target disks...', cls: 'warning', delay: 600 },
-                { text: '    Checking /sys/block/sda    removable=0  size=976773168', cls: 'output', delay: 150 },
-                { text: '    Checking /sys/block/sdb    removable=0  size=488397168', cls: 'output', delay: 150 },
-                { text: '    Checking /sys/block/nvme0n1 removable=0  size=500118192', cls: 'output', delay: 150 },
-                { text: '    Checking /sys/block/sdc    removable=1  SKIP (USB boot drive)', cls: 'warning', delay: 150 },
-                { text: '', cls: '', delay: 300 },
-                { text: '[+] Target disks found:', cls: 'success', delay: 400 },
-                { text: '    /dev/sda     — WDC WD5000AAKX      — 465 GB  — S/N: WD-WCC2T1835421', cls: 'command', delay: 200 },
-                { text: '    /dev/sdb     — Seagate ST250DM000   — 232 GB  — S/N: Z2A4HKXL', cls: 'command', delay: 200 },
-                { text: '    /dev/nvme0n1 — Samsung SSD 970 EVO  — 238 GB  — S/N: S4EVNX0R712345K', cls: 'command', delay: 200 },
-                { text: '', cls: '', delay: 300 },
-                { text: '[*] Mode: FULL — DoD 5220.22-M (7-pass)', cls: 'error', delay: 400 },
-                { text: '    Pass sequence: 0x00 → 0xFF → Random → 0x00 → 0xFF → Random → Random', cls: 'output', delay: 200 },
-                { text: '    Estimated time: ~2h 15m for 935 GB total', cls: 'output', delay: 200 },
-                { text: '', cls: '', delay: 300 },
-                { text: '[!] ALL DATA ON 3 DISKS (935 GB) WILL BE PERMANENTLY DESTROYED', cls: 'error', delay: 500 },
-                { text: '    This operation is IRREVERSIBLE. Military-grade erasure.', cls: 'error', delay: 300 },
-                { text: '    Erasure starts in 5 seconds... (Ctrl+C to abort)', cls: 'warning', delay: 1200 },
-                { text: '', cls: '', delay: 200 },
-                { text: '[*] Starting nwipe — method: dod522022m — prng: mersenne', cls: 'prompt', delay: 800 },
-                { text: '', cls: '', delay: 200 },
-                { text: '    Pass 1/7 [0x00]', cls: 'warning', delay: 400 },
-                { text: '    /dev/sda     [######--------------]  28%   98MB/s  ETA 52m', cls: 'output', delay: 700 },
-                { text: '    /dev/sdb     [##########----------]  51%  102MB/s  ETA 18m', cls: 'output', delay: 500 },
-                { text: '    /dev/nvme0n1 [#############-------]  67%  412MB/s  ETA 6m', cls: 'output', delay: 500 },
-                { text: '    /dev/nvme0n1 [####################] 100%  pass 1 complete', cls: 'success', delay: 600, replace2: true },
-                { text: '    /dev/sdb     [####################] 100%  pass 1 complete', cls: 'success', delay: 500, replace2: true },
-                { text: '    /dev/sda     [####################] 100%  pass 1 complete', cls: 'success', delay: 700, replace2: true },
-                { text: '', cls: '', delay: 200 },
-                { text: '    Pass 2/7 [0xFF]', cls: 'warning', delay: 300 },
-                { text: '    /dev/sda     [########------------]  41%   97MB/s', cls: 'output', delay: 600 },
-                { text: '    /dev/sda     [####################] 100%  pass 2 complete', cls: 'success', delay: 600, replace2: true },
-                { text: '    Pass 3/7 [Random — Mersenne Twister]', cls: 'warning', delay: 300 },
-                { text: '    /dev/sda     [###########---------]  55%   71MB/s', cls: 'output', delay: 600 },
-                { text: '    /dev/sda     [####################] 100%  pass 3 complete', cls: 'success', delay: 600, replace2: true },
-                { text: '    Pass 4/7 [0x00]  ...', cls: 'warning', delay: 300 },
-                { text: '    Pass 5/7 [0xFF]  ...', cls: 'warning', delay: 400, replace: true },
-                { text: '    Pass 6/7 [Random]  ...', cls: 'warning', delay: 400, replace: true },
-                { text: '    Pass 7/7 [Random — final]  ...', cls: 'warning', delay: 400, replace: true },
-                { text: '    Pass 7/7 [Random — final]  COMPLETE', cls: 'success', delay: 600, replace: true },
-                { text: '', cls: '', delay: 200 },
-                { text: '[+] nwipe completed — 7 passes on 3 disks in 8143s (2h 15m 43s)', cls: 'success', delay: 500 },
-                { text: '', cls: '', delay: 300 },
-                { text: '[*] Running verification pass...', cls: 'prompt', delay: 600 },
-                { text: '  Verifying /dev/sda — reading 100 random sectors...', cls: 'prompt', delay: 300 },
-                { text: '  ✓ /dev/sda — Verification PASSED (100/100 sectors zeroed)', cls: 'success', delay: 400 },
-                { text: '  Verifying /dev/sdb — reading 100 random sectors...', cls: 'prompt', delay: 300 },
-                { text: '  ✓ /dev/sdb — Verification PASSED (100/100 sectors zeroed)', cls: 'success', delay: 400 },
-                { text: '  Verifying /dev/nvme0n1 — reading 100 random sectors...', cls: 'prompt', delay: 300 },
-                { text: '  ✓ /dev/nvme0n1 — Verification PASSED (100/100 sectors zeroed)', cls: 'success', delay: 400 },
-                { text: '', cls: '', delay: 300 },
-                { text: '[*] Writing logs to USB...', cls: 'prompt', delay: 400 },
-                { text: '  Log: /mnt/usb/fastborn-logs/fastborn_sda_20260320T163543Z.json', cls: 'success', delay: 200 },
-                { text: '  Log: /mnt/usb/fastborn-logs/fastborn_sdb_20260320T163543Z.json', cls: 'success', delay: 200 },
-                { text: '  Log: /mnt/usb/fastborn-logs/fastborn_nvme0n1_20260320T163543Z.json', cls: 'success', delay: 200 },
-                { text: '', cls: '', delay: 500 },
-                { text: '  ██████╗  ██████╗ ███╗   ██╗███████╗', cls: 'success', delay: 100, pre: true },
-                { text: '  ██╔══██╗██╔═══██╗████╗  ██║██╔════╝', cls: 'success', delay: 50, pre: true },
-                { text: '  ██║  ██║██║   ██║██╔██╗ ██║█████╗', cls: 'success', delay: 50, pre: true },
-                { text: '  ██║  ██║██║   ██║██║╚██╗██║██╔══╝', cls: 'success', delay: 50, pre: true },
-                { text: '  ██████╔╝╚██████╔╝██║ ╚████║███████╗', cls: 'success', delay: 50, pre: true },
-                { text: '  ╚═════╝  ╚═════╝ ╚═╝  ╚═══╝╚══════╝', cls: 'success', delay: 50, pre: true },
-                { text: '', cls: '', delay: 200 },
-                { text: '    All 3 disks erased (7-pass DoD) and verified successfully.', cls: 'success', delay: 400 },
-                { text: '    935 GB destroyed in 2h 15m 43s — 0 verification errors', cls: 'success', delay: 300 },
-                { text: '    Remove USB drive and insert OS installation media.', cls: 'prompt', delay: 400 },
-                { text: '', cls: '', delay: 500 },
-                { text: '    Rebooting in 3s...', cls: 'prompt', delay: 1000 },
-                { text: '    Rebooting in 2s...', cls: 'prompt', delay: 1000, replace: true },
-                { text: '    Rebooting in 1s...', cls: 'prompt', delay: 1000, replace: true },
-                { text: '', cls: '', delay: 500 },
-                { text: '--- SYSTEM REBOOT ---', cls: 'error', delay: 0 },
-            ];
-
-            const terminal = document.getElementById('boot-terminal');
-            const placeholder = document.getElementById('boot-placeholder');
-            let running = false;
-            let timeouts = [];
-
-            function resetSequence() {
-                timeouts.forEach(t => clearTimeout(t));
-                timeouts = [];
-                running = false;
-            }
-
-            function runSequence() {
-                if (running) return;
-                running = true;
-                terminal.innerHTML = '';
-
-                let countdownEl = null;
-                let progressEls = [];
-                let totalDelay = 0;
-
-                lines.forEach((line, i) => {
-                    totalDelay += line.delay;
-                    const tid = setTimeout(() => {
-                        if (line.replace && countdownEl) {
-                            countdownEl.textContent = line.text;
-                            countdownEl.className = line.cls;
-                            terminal.scrollTop = terminal.scrollHeight;
-                            return;
-                        }
-
-                        if (line.replace2 && progressEls.length > 0) {
-                            const devName = line.text.trim().split(' ')[0];
-                            const existing = progressEls.find(el => el.textContent.trim().startsWith(devName));
-                            if (existing) {
-                                existing.textContent = line.text;
-                                existing.className = line.cls;
-                                terminal.scrollTop = terminal.scrollHeight;
-                                return;
-                            }
-                        }
-
-                        if (line.text === '') {
-                            terminal.appendChild(document.createElement('br'));
-                            countdownEl = null;
-                        } else {
-                            const el = document.createElement(line.pre ? 'pre' : 'div');
-                            el.textContent = line.text;
-                            el.className = line.cls;
-                            if (line.pre) {
-                                el.style.margin = '0';
-                                el.style.padding = '0';
-                                el.style.fontSize = 'clamp(0.35rem, 1.2vw, 0.75rem)';
-                                el.style.lineHeight = '1.15';
-                                el.style.fontFamily = "'JetBrains Mono', monospace";
-                            }
-                            terminal.appendChild(el);
-
-                            if (line.text.includes('Auto-selecting in') || line.text.includes('Rebooting in')) {
-                                countdownEl = el;
-                            }
-                            if (line.text.includes('/dev/') && (line.text.includes('[#') || line.text.includes('DONE'))) {
-                                progressEls.push(el);
-                            }
-                        }
-
-                        terminal.scrollTop = terminal.scrollHeight;
-                    }, totalDelay);
-                    timeouts.push(tid);
-                });
-
-                // After sequence ends: trigger disintegration, then reset and replay
-                const disintegrateTid = setTimeout(() => {
-                    disintegrateSection();
-                }, totalDelay + 1500);
-                timeouts.push(disintegrateTid);
-
-                const restartTid = setTimeout(() => {
-                    resetSequence();
-                    restoreSection();
-                    runSequence();
-                }, totalDelay + 10000);
-                timeouts.push(restartTid);
-            }
-
-            // === Disintegration engine ===
-            function disintegrateSection() {
-                const section = document.getElementById('section-workflow');
-                if (!section || section.classList.contains('disintegrating')) return;
-
-                // Capture FIRST, then start hiding content
-                html2canvas(section, {
-                    backgroundColor: '#0a0a0a',
-                    scale: 0.5,
-                }).then(function(canvas) {
-                    // Now that we have the snapshot, hide original content
-                    section.classList.add('disintegrating');
-                    const ctx = canvas.getContext('2d');
-                    const w = canvas.width;
-                    const h = canvas.height;
-                    const particleSize = 8; // px per particle chunk
-                    const cols = Math.ceil(w / particleSize);
-                    const rows = Math.ceil(h / particleSize);
-
-                    const wrap = document.createElement('div');
-                    wrap.className = 'disintegrate-canvas-wrap';
-                    wrap.id = 'disintegrate-wrap';
-                    section.appendChild(wrap);
-
-                    // Section dimensions for positioning
-                    const rect = section.getBoundingClientRect();
-                    const scaleX = rect.width / w;
-                    const scaleY = rect.height / h;
-
-                    // Create particles in random order for organic feel
-                    const cells = [];
-                    for (let row = 0; row < rows; row++) {
-                        for (let col = 0; col < cols; col++) {
-                            cells.push({ row, col });
-                        }
-                    }
-                    // Shuffle — right side disintegrates first (like Thanos snap)
-                    cells.sort(function(a, b) {
-                        return (b.col + Math.random() * cols * 0.5) - (a.col + Math.random() * cols * 0.5);
-                    });
-
-                    cells.forEach(function(cell, i) {
-                        const sx = cell.col * particleSize;
-                        const sy = cell.row * particleSize;
-                        const sw = Math.min(particleSize, w - sx);
-                        const sh = Math.min(particleSize, h - sy);
-
-                        if (sw <= 0 || sh <= 0) return;
-
-                        // Extract pixel data to check if this chunk is empty
-                        const imgData = ctx.getImageData(sx, sy, sw, sh);
-                        let hasContent = false;
-                        for (let p = 3; p < imgData.data.length; p += 16) {
-                            if (imgData.data[p] > 20) { hasContent = true; break; }
-                        }
-                        if (!hasContent) return;
-
-                        // Create mini canvas for this particle
-                        const pCanvas = document.createElement('canvas');
-                        pCanvas.width = sw;
-                        pCanvas.height = sh;
-                        pCanvas.getContext('2d').putImageData(imgData, 0, 0);
-
-                        const particle = document.createElement('div');
-                        particle.className = 'disintegrate-particle';
-                        particle.style.left = (sx * scaleX) + 'px';
-                        particle.style.top = (sy * scaleY) + 'px';
-                        particle.style.width = (sw * scaleX) + 'px';
-                        particle.style.height = (sh * scaleY) + 'px';
-                        particle.style.backgroundImage = 'url(' + pCanvas.toDataURL() + ')';
-
-                        // Random fly direction — mostly up-right
-                        const tx = (50 + Math.random() * 200) * (Math.random() > 0.3 ? 1 : -1);
-                        const ty = -(30 + Math.random() * 250);
-                        const rot = (-180 + Math.random() * 360) + 'deg';
-
-                        particle.style.setProperty('--tx', tx + 'px');
-                        particle.style.setProperty('--ty', ty + 'px');
-                        particle.style.setProperty('--rot', rot);
-
-                        // Staggered delay — right side first, longer duration
-                        const delay = (i / cells.length) * 3.5;
-                        const duration = 1.5 + Math.random() * 1;
-                        particle.style.animation = 'particle-fly ' + duration + 's ease-in ' + delay + 's forwards';
-
-                        wrap.appendChild(particle);
-                    });
-                });
-            }
-
-            function restoreSection() {
-                const section = document.getElementById('section-workflow');
-                if (!section) return;
-                section.classList.remove('disintegrating');
-                const wrap = document.getElementById('disintegrate-wrap');
-                if (wrap) wrap.remove();
-            }
-
-            // Intersection Observer — start when visible, pause when not
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        if (placeholder && placeholder.parentNode) placeholder.remove();
-                        runSequence();
-                    } else {
-                        resetSequence();
-                        restoreSection();
-                        terminal.innerHTML = '<div style="color:#333;font-size:0.75rem">Scroll here to watch boot sequence...</div>';
-                    }
-                });
-            }, { threshold: 0.3 });
-
-            observer.observe(terminal);
-        })();
-    </script>
-
+/* ── build terminal ──────────────────────────── */
+const BUILD = [
+  ['<span class="p">$</span> git clone https://github.com/badursun/Fastborn.git', 0],
+  ['<span class="p">$</span> cd Fastborn', 500],
+  ['<span class="p">$</span> chmod +x build.sh &amp;&amp; ./build.sh', 500],
+  ['<span class="o">Building Docker image...</span>', 900],
+  ['<span class="o">Running ISO builder inside Docker container...</span>', 900],
+  ['<span class="s">ISO created successfully!</span>', 1200],
+  ['<span class="o">File: output/fastborn.iso · Size: 20M</span>', 300],
+];
+const bt = $("#buildTerm"); let built = false;
+onScreen(bt, async (v) => {
+  if (!v || built) return; built = true;
+  for (const [h, d] of BUILD) { await sleep(reduced ? 0 : d); bt.insertAdjacentHTML("beforeend", `<div>${h}</div>`); }
+}, { threshold: .4 });
+})();
+</script>
 </body>
-
 </html>
