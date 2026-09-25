@@ -1,101 +1,106 @@
-# FastBorn — Secure Disk Erasure Tool
+<div align="center">
 
-```
-    ███████╗ █████╗ ███████╗████████╗██████╗  ██████╗ ██████╗ ███╗   ██╗
-    ██╔════╝██╔══██╗██╔════╝╚══██╔══╝██╔══██╗██╔═══██╗██╔══██╗████╗  ██║
-    █████╗  ███████║███████╗   ██║   ██████╔╝██║   ██║██████╔╝██╔██╗ ██║
-    ██╔══╝  ██╔══██║╚════██║   ██║   ██╔══██╗██║   ██║██╔══██╗██║╚██╗██║
-    ██║     ██║  ██║███████║   ██║   ██████╔╝╚██████╔╝██║  ██║██║ ╚████║
-    ╚═╝     ╚═╝  ╚═╝╚══════╝   ╚═╝   ╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═══╝
+<a href="https://burakdursun.com/Fastborn/"><img src="docs/assets/og-image.png" alt="FastBorn — güvenli disk silme aracı" width="100%"></a>
 
-         Secure Disk Erasure Tool — Open Source DBAN Alternative
-```
+### USB tak. Aç. Bekle. Bitti.
 
-> Zero-touch bootable USB disk silme aracı. USB tak, aç, bekle, bitti.
+Makinedeki tüm dahili diskleri silen ve arkasında doğrulanmış bir rapor bırakan, dokunmadan çalışan boot edilebilir USB.<br>
+İnternet kafeler, ofisler ve okul laboratuvarları için açık kaynak DBAN alternatifi.
 
-**[English](README.md)** | Türkçe
+[![GitHub Release](https://img.shields.io/github/v/release/badursun/Fastborn?color=22ff5e&labelColor=0b1a10)](https://github.com/badursun/Fastborn/releases/latest)
+[![License: MIT](https://img.shields.io/badge/license-MIT-22ff5e?labelColor=0b1a10)](LICENSE)
+[![ISO size](https://img.shields.io/badge/ISO-~20%20MB-22ff5e?labelColor=0b1a10)](https://github.com/badursun/Fastborn/releases/latest)
+[![BIOS + UEFI](https://img.shields.io/badge/boot-BIOS%20%2B%20UEFI-22ff5e?labelColor=0b1a10)](#özellikler)
+[![Website](https://img.shields.io/badge/website-burakdursun.com%2FFastborn-ff2b44?labelColor=1a0b0d)](https://burakdursun.com/Fastborn/)
 
-[![GitHub Release](https://img.shields.io/github/v/release/badursun/Fastborn)](https://github.com/badursun/Fastborn/releases/latest)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![ISO Size](https://img.shields.io/badge/ISO_Size-~20MB-blue)](#)
-[![Website](https://img.shields.io/badge/Website-burakdursun.com/Fastborn-00ff41)](https://burakdursun.com/Fastborn/)
+**[⬇ fastborn.iso indir (v1.0)](https://github.com/badursun/Fastborn/releases/latest/download/fastborn.iso)** &nbsp;·&nbsp; **[▶ Canlı demo](https://burakdursun.com/Fastborn/#lab)** &nbsp;·&nbsp; **[English](README.md)**
+
+</div>
 
 ---
 
-## Hızlı Başlangıç
+> [!CAUTION]
+> **Geri dönüşü yoktur.** Bu USB ile açılan makinenin **tüm dahili diskleri silinir**; otomatik modda onay sorulmaz. Yanlış makineye takmayın. Boot USB'si otomatik olarak hariç tutulur (`removable=1`) ve silme başlamadan önce 5 saniyelik bir iptal süresi vardır (Ctrl+C).
 
-### 1. ISO'yu İndir
+## Hızlı başlangıç
 
-**[fastborn.iso indir (v1.0)](https://github.com/badursun/Fastborn/releases/latest/download/fastborn.iso)** — ~20MB
-
-### 2. USB'ye Yaz
-
-| Platform | Komut / Araç |
-|----------|-------------|
-| **Windows** | [Rufus](https://rufus.ie) ile DD Image modunda yaz |
-| **macOS** | `sudo dd if=fastborn.iso of=/dev/rdiskX bs=1m` |
-| **Linux** | `sudo dd if=fastborn.iso of=/dev/sdX bs=1M` |
-
-### 3. Kullan
+| Adım | Ne yapılır |
+|---|---|
+| **1. İndir** | [`fastborn.iso`](https://github.com/badursun/Fastborn/releases/latest/download/fastborn.iso) — ~20 MB |
+| **2. USB'ye yaz** | Windows: [Rufus](https://rufus.ie) ile **DD Image** modunda · macOS: `sudo dd if=fastborn.iso of=/dev/rdiskX bs=1m` · Linux: `sudo dd if=fastborn.iso of=/dev/sdX bs=1M` |
+| **3. Aç** | USB'yi tak → makineyi aç → uzaklaş |
 
 ```
-USB tak → Makineyi aç → GRUB menüsü gelir (3sn) → Quick Erase otomatik başlar
-→ Diskler silinir → Doğrulanır → Log USB'ye yazılır → Otomatik reboot
-→ USB çek → Windows CD/USB tak → Kur
+USB tak → Makineyi aç → GRUB menüsü (3sn) → Quick Erase otomatik başlar
+→ Tüm diskler paralel silinir → Doğrulanır → JSON log USB'ye yazılır → Otomatik reboot
+→ USB'yi çek → İşletim sistemi kurulum medyasını tak → Kur
 ```
 
----
+<details>
+<summary><b>İndirmeyi doğrula (SHA-256)</b></summary>
 
-## Neden FastBorn?
+```
+6f1380a91a61bec991f5e6787a75df8b62c86ed69685c9539fdd86d9bf6a29dc  fastborn.iso
+```
 
-Internet kafe, ofis, okul lab gibi ortamlarda **50+ makineyi hızla sıfırlamak** için tasarlandı. DBAN öldü (Blancco'ya satıldı), nwipe tek başına bootable değil. FastBorn ikisinin de iyisini yapıyor:
+```bash
+shasum -a 256 fastborn.iso      # macOS
+sha256sum fastborn.iso          # Linux
+certutil -hashfile fastborn.iso SHA256   # Windows
+```
 
-| Özellik | FastBorn | DBAN | nwipe |
-|---------|:--------:|:----:|:-----:|
-| Zero-touch (dokunma, çalışır) | :white_check_mark: | :x: | :x: |
-| NVMe desteği | :white_check_mark: | :x: | :white_check_mark: |
-| Quick mode (1-pass) | :white_check_mark: | :x: | :white_check_mark: |
-| JSON silme raporu | :white_check_mark: | :x: | :x: |
-| Verification (doğrulama) | :white_check_mark: | :x: | :x: |
-| Auto-reboot | :white_check_mark: | :x: | :x: |
-| Modern kernel | :white_check_mark: | :x: | ~ |
-| Bootable ISO | :white_check_mark: | :white_check_mark: | :x: |
+</details>
 
----
+## Nasıl çalıştığını gör
 
-## Silme Modları
+<div align="center">
+<a href="https://burakdursun.com/Fastborn/#lab"><img src="docs/assets/wipe-demo.gif" alt="Simüle edilmiş DoD 7 geçişli silme: her sektör geçiş geçiş üzerine yazılıyor, sonra 100 rastgele sektör doğrulanıyor" width="100%"></a>
+<br><sub>Tam mod (DoD 7 geçiş) silmenin simülasyonu. <a href="https://burakdursun.com/Fastborn/#lab">Etkileşimli silme laboratuvarında</a> kendin dene.</sub>
+</div>
 
-### Quick Mode (Default)
-- **1-pass zero fill** — tüm sektörlere 0x00 yazar
-- MBR dahil her şey silinir
-- ~80GB disk icin **~15-20 dakika**
-- Internet kafe senaryosu icin ideal
+## Silme modları
 
-### Full Mode (DoD 5220.22-M)
-- **7-pass** — 0x00 → 0xFF → Random → tekrar (x7)
-- Askeri standart veri imhası
-- ~80GB disk icin **~2+ saat**
-- Hassas veri icin
+GRUB menüsü **3 saniye** bekler. Hiçbir tuşa basmazsan Quick mod başlar; hassas veri için menüden Full'u seç.
 
-GRUB menüsünde 3 saniye bekler. Hiçbir tuşa basmazsan **Quick mode** otomatik başlar.
-
----
+| | **Quick** (varsayılan) | **Full** |
+|---|---|---|
+| Yöntem | 1 geçiş sıfır doldurma (`0x00`) | DoD 5220.22-M, nwipe ile 7 geçiş |
+| Desen | `0x00` | `0x00 → 0xFF → RND → 0x00 → 0xFF → RND → RND` |
+| Süre (80 GB) | ~15–20 dk | ~2+ saat |
+| Uygun olduğu yer | İnternet kafe, ofis, laboratuvar — boot sektörü zararlılarını da temizler | Hassas veri barındırmış diskler |
+| Log yöntemi | `quick-1pass-zero` | `full-dod522022m-7pass` |
 
 ## Özellikler
 
-- **Paralel silme** — Birden fazla disk aynı anda silinir (NVMe dahil)
-- **Verification pass** — Silme sonrası 100 rastgele sektör okunarak sıfırlandığı doğrulanır
-- **JSON log** — Her disk için detaylı rapor USB'ye yazılır (`/fastborn-logs/`)
-- **Auto-reboot** — İş bitince 5 saniye geri sayım, otomatik restart
-- **BIOS + UEFI** — Her iki boot modunu destekler
-- **~20MB ISO** — RAM'den çalışır, boot sırasında disklere dokunmaz
-- **USB koruması** — Boot USB'si otomatik hariç tutulur (removable=1)
+- **Dokunmadan çalışır** — tak, aç, hiçbir şeye dokunma
+- **Paralel silme** — tüm dahili diskler aynı anda: SATA, HDD, SSD ve NVMe
+- **Doğrulama** — silme sonrası her diskten 100 rastgele sektör geri okunur
+- **JSON rapor** — her disk için USB'de `/fastborn-logs/` altına bir log
+- **Otomatik reboot** — iş bitince 5 saniye geri sayım; USB'yi çek, işletim sistemini kur
+- **BIOS + UEFI** — tek hibrit ISO, USB'den veya CD'den açılır
+- **~20 MB, RAM'den çalışır** — boot sırasında hedef disklere dokunmaz
+- **Boot USB koruması** — çıkarılabilir aygıtlar (`removable=1`) her zaman atlanır
+- **Güncel çekirdek** — Linux 6.6 LTS
 
----
+## Neden FastBorn?
 
-## JSON Log Örneği
+DBAN, Blancco'ya satıldı ve çok eski bir çekirdekte kaldı; nwipe iyi ama tek başına boot edilemiyor. FastBorn, güncel bir çekirdekle nwipe'ı herkese verilebilecek bir USB'de birleştiriyor.
 
-Her silme işlemi sonrası USB'ye `/fastborn-logs/` altına otomatik yazılır:
+| Özellik | FastBorn | DBAN | nwipe |
+|---|:---:|:---:|:---:|
+| Dokunmadan çalışma | ✅ | ❌ | ❌ |
+| NVMe desteği | ✅ | ❌ | ✅ |
+| Quick mod (1 geçiş) | ✅ | ❌ | ✅ |
+| JSON silme raporu | ✅ | ❌ | ❌ |
+| Doğrulama | ✅ | ❌ | ❌ |
+| Otomatik reboot | ✅ | ❌ | ❌ |
+| Güncel çekirdek | ✅ 6.6 LTS | ❌ 2.6.x | ~ dağıtıma bağlı |
+| Boot edilebilir ISO | ✅ | ✅ | ❌ ShredOS gerekir |
+| Aktif geliştirme | ✅ | ❌ | ✅ |
+
+## Silme raporu
+
+USB'de `/fastborn-logs/` altına, her disk için ayrı dosya olarak otomatik yazılır:
 
 ```json
 {
@@ -122,60 +127,70 @@ Her silme işlemi sonrası USB'ye `/fastborn-logs/` altına otomatik yazılır:
 }
 ```
 
----
+## Yol haritası — V2
 
-## USB'ye Yazma (Detaylı)
+V2 geliştiriliyor; FastBorn'u hata anında güvenli duran bir yapı ve doğrulanabilir kanıtlar üzerine yeniden kuruyor:
 
-### Windows (Rufus — Önerilen)
+- **Yerel sanitize komutları** — NVMe Format / Sanitize ve ATA Sanitize; HDD üzerine yazmada tam geri okuma
+- **Donanım yeterliliği** — onaylı cihaz profillerinin birebir eşleşen, varsayılanı red olan kaydı
+- **Paralel koordinatör** — özeti alınmış, dondurulmuş bir çalışma planıyla yönetilen, birbirinden yalıtılmış işçiler
+- **İmzalı kanıt** — ayrık Ed25519 rapor imzaları ve NIST Appendix C ile uyumlu silme sertifikaları
 
-1. [rufus.ie](https://rufus.ie) adresinden Rufus'u indir (portable, kurulum gerektirmez)
-2. USB flash drive'ı tak
-3. Rufus'u çalıştır:
-   - **Device:** USB drive'ını seç
-   - **Boot selection:** "Disk or ISO image" → SELECT → `fastborn.iso` seç
+> [!NOTE]
+> V2 henüz **kullanıma hazır bir sürüm değil**. Bugün gerçek iş için v1.0'ı kullanın.
+
+## USB'ye yazma (detaylı)
+
+<details>
+<summary><b>Windows — Rufus (önerilen)</b></summary>
+
+1. [Rufus](https://rufus.ie)'u indir (portable, kurulum gerektirmez)
+2. USB'yi tak
+3. Rufus'ta:
+   - **Device:** USB'n
+   - **Boot selection:** "Disk or ISO image" → SELECT → `fastborn.iso`
    - **Partition scheme:** MBR
    - **Target system:** BIOS or UEFI
-   - START'a bas
-4. "Write in DD Image mode" uyarısı çıkarsa **DD Image** seç → OK
+   - **START**'a bas
+4. Sorulursa **DD Image** modunu seç → OK
 
-### Windows (balenaEtcher — Alternatif)
+</details>
 
-1. [etcher.balena.io](https://etcher.balena.io) adresinden Etcher'ı indir
-2. "Flash from file" → `fastborn.iso` seç
-3. "Select target" → USB drive seç
-4. "Flash!" bas
+<details>
+<summary><b>Windows — balenaEtcher</b></summary>
 
-### macOS
+1. [Etcher](https://etcher.balena.io)'ı indir
+2. "Flash from file" → `fastborn.iso`
+3. "Select target" → USB'n
+4. "Flash!"
+
+</details>
+
+<details>
+<summary><b>macOS</b></summary>
 
 ```bash
-# USB disk numarasını bul
-diskutil list
-
-# USB'yi unmount et (X = disk numarası)
-diskutil unmountDisk /dev/diskX
-
-# ISO'yu yaz (rdisk = hızlı)
-sudo dd if=fastborn.iso of=/dev/rdiskX bs=1m status=progress
-
-# USB'yi çıkar
+diskutil list                                   # USB disk numarasını bul
+diskutil unmountDisk /dev/diskX                 # X = disk numarası
+sudo dd if=fastborn.iso of=/dev/rdiskX bs=1m status=progress   # rdisk = daha hızlı
 diskutil eject /dev/diskX
 ```
 
-### Linux
+</details>
+
+<details>
+<summary><b>Linux</b></summary>
 
 ```bash
-# USB disk yolunu bul
-lsblk
-
-# ISO'yu yaz (X = disk harfi, örn: sdb)
+lsblk                                           # USB aygıtını bul
 sudo dd if=fastborn.iso of=/dev/sdX bs=1M status=progress conv=fsync
 ```
 
----
+</details>
 
-## Kaynaktan Build Etme
+## Kaynaktan derleme
 
-Docker Desktop kurulu olmalı.
+Docker Desktop gerekir.
 
 ```bash
 git clone https://github.com/badursun/Fastborn.git
@@ -186,19 +201,8 @@ chmod +x build.sh
 
 Çıktı: `output/fastborn.iso`
 
----
-
-## Güvenlik Uyarıları
-
-> **GERİ DÖNÜŞÜ YOKTUR** — FastBorn ile silinen veriler kurtarılamaz.
-
-- USB boot diski otomatik olarak hariç tutulur (removable=1 tespiti)
-- ISO RAM'den çalışır, boot sırasında hedef disklere dokunmaz
-- Silme başlamadan önce 5 saniye bekleme süresi vardır (Ctrl+C ile iptal)
-- Yanlış makineye takmayın — taktığınız anda o makinenin tüm diskleri silinir
-
----
-
 ## Lisans
 
-MIT License — Detaylar için [LICENSE](LICENSE) dosyasına bakın.
+MIT — detaylar için [LICENSE](LICENSE). Olduğu gibi, hiçbir garanti olmadan sunulur; kullanım sorumluluğu size aittir.
+
+<div align="center"><sub><b>Diskler biter. Mahremiyet yaşar.</b> · <a href="https://burakdursun.com/Fastborn/">burakdursun.com/Fastborn</a></sub></div>
